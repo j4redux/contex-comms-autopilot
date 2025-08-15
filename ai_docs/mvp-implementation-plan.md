@@ -56,7 +56,7 @@
 
 ## Technical Architecture
 
-### Hybrid Integration Approach
+### Pure Inngest Architecture (Implemented)
 
 ```mermaid
 graph TB
@@ -64,10 +64,9 @@ graph TB
     UI --> Inngest[Inngest Jobs]
     
     API --> Sandbox[Daytona Sandbox]
-    API --> WS[WebSocket Streaming]
-    
-    Inngest --> API
-    Inngest --> UI[Real-time Updates]
+    Inngest --> InngestFunc[Inngest Functions]
+    InngestFunc --> Sandbox
+    InngestFunc --> UI[Real-time Channels]
     
     Sandbox --> Claude[Claude Code]
     Claude --> Knowledge[Knowledge Files]
@@ -81,10 +80,10 @@ graph TB
    - Real-time streaming display
    - Dual-mode: Process (new knowledge) + Ask (query existing)
 
-2. **Job Orchestration** (Inngest + Project Omni Backend)
+2. **Job Orchestration** (Pure Inngest Architecture)
    - Inngest handles job durability, retries, complex workflows
-   - Project Omni backend handles Claude execution and sandbox management
-   - WebSocket provides real-time log streaming during processing
+   - Inngest functions execute Claude Code within Daytona sandboxes
+   - Real-time streaming via Inngest channels during processing
 
 3. **Knowledge Processing** (Existing Project Omni Pipeline)
    - Structured filesystem as working memory

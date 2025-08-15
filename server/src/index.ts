@@ -6,6 +6,8 @@ import { loadConfig } from "./services/config"
 import { createSandbox, getSandboxStatus } from "./services/sandbox"
 import { executeCommand, executeCommandAsync, getCommandStatus } from "./services/daytona"
 import { broadcastDone, broadcastError, broadcastLog, broadcastResult, register, startHeartbeat, unregister } from "./services/ws"
+import { inngest } from "./services/inngest"
+import { inngestHandler } from "./api/inngest"
 import crypto from "node:crypto"
 import type { ServerWebSocket } from "bun"
 
@@ -53,6 +55,7 @@ type ProcessKnowledgeBody = {
   input: string
   sandboxId: string
   userId: string
+  taskId: string
   model?: string
   env?: Record<string, string>
 }
@@ -62,10 +65,12 @@ function validateProcessBody(raw: unknown): ProcessKnowledgeBody | undefined {
   if (typeof r.input !== "string" || r.input.trim() === "") return undefined
   if (typeof r.sandboxId !== "string" || r.sandboxId.trim() === "") return undefined
   if (typeof r.userId !== "string" || r.userId.trim() === "") return undefined
+  if (typeof r.taskId !== "string" || r.taskId.trim() === "") return undefined
   return {
     input: r.input,
     sandboxId: r.sandboxId,
     userId: r.userId,
+    taskId: r.taskId,
     model: typeof r.model === "string" ? r.model : undefined,
     env: typeof r.env === "object" && !Array.isArray(r.env) ? r.env as Record<string, string> : undefined,
   }
@@ -161,7 +166,7 @@ const server = Bun.serve({
       const eff = Effect.gen(function* () {
         const raw = (yield* Effect.promise(() => readJson(req))) as unknown
         const body = validateProcessBody(raw)
-        if (!body) return apiError("VALIDATION_ERROR", "Invalid request body", { expected: "{ input, sandboxId, userId }" }, 400)
+        if (!body) return apiError("VALIDATION_ERROR", "Invalid request body", { expected: "{ input, sandboxId, userId, taskId }" }, 400)
         
         // Check sandbox status
         const sb = yield* Effect.promise(() => getSandboxStatus(body.sandboxId))
@@ -170,96 +175,36 @@ const server = Bun.serve({
         
         const jobId = `job_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`
         
-        // Fire-and-forget job execution
-        void (async () => {
-          try {
-            broadcastLog({ userId: body.userId, sandboxId: body.sandboxId, jobId, data: "job started" })
-            broadcastLog({ userId: body.userId, sandboxId: body.sandboxId, jobId, data: "artifact base: /workspace" })
-            
-            // Check if we need to fallback to daytona home
-            const workspaceCheck = await executeCommand(body.sandboxId, "ls /workspace > /dev/null 2>&1")
-            const artifactBase = workspaceCheck.exitCode === 0 ? "/workspace" : "/home/daytona"
-            if (artifactBase === "/home/daytona") {
-              broadcastLog({ userId: body.userId, sandboxId: body.sandboxId, jobId, data: "artifact base fallback: /home/daytona" })
-            }
-            
-            // Verify Claude Code is available
-            const claudeCheck = await executeCommand(body.sandboxId, "claude --version")
-            if (claudeCheck.exitCode === 0) {
-              broadcastLog({ userId: body.userId, sandboxId: body.sandboxId, jobId, data: "claude --version OK" })
-            } else {
-              broadcastError({ 
-                userId: body.userId, 
-                sandboxId: body.sandboxId, 
-                jobId, 
-                code: "CLAUDE_NOT_AVAILABLE", 
-                message: "Claude Code CLI not available in sandbox" 
-              })
-              return
-            }
-            
-            // Verify API key
-            const apiKeyCheck = await executeCommand(body.sandboxId, "test -n \"$ANTHROPIC_API_KEY\" && echo present || echo missing")
-            broadcastLog({ userId: body.userId, sandboxId: body.sandboxId, jobId, data: `ANTHROPIC_API_KEY: ${apiKeyCheck.stdout.trim()}` })
-            
-            // DNS and network preflight checks
-            broadcastLog({ userId: body.userId, sandboxId: body.sandboxId, jobId, data: "dns preflight: api.anthropic.com" })
-            await executeCommand(body.sandboxId, "nslookup api.anthropic.com > /dev/null 2>&1")
-            
-            broadcastLog({ userId: body.userId, sandboxId: body.sandboxId, jobId, data: "https preflight: api.anthropic.com" })
-            await executeCommand(body.sandboxId, "curl -s --head https://api.anthropic.com > /dev/null 2>&1")
-            
-            // Use the working Claude CLI pattern from our tests
-            const model = body.model || "sonnet"
-            const escapedInput = body.input.replace(/"/g, '\\"')
-            const command = `echo "${escapedInput}" | claude -p --output-format json --model ${model}`
-            
-            broadcastLog({ userId: body.userId, sandboxId: body.sandboxId, jobId, data: `executing claude command` })
-            const result = await executeCommand(body.sandboxId, command)
-            
-            if (result.exitCode === 0) {
-              // Parse Claude's JSON response
-              try {
-                const claudeResponse = JSON.parse(result.stdout)
-                broadcastLog({ userId: body.userId, sandboxId: body.sandboxId, jobId, data: `claude response: ${claudeResponse.result?.substring(0, 100)}...` })
-                
-                // Send the result from Claude's response
-                broadcastResult({ 
-                  userId: body.userId, 
-                  sandboxId: body.sandboxId, 
-                  jobId, 
-                  format: "text", 
-                  data: claudeResponse.result || result.stdout
-                })
-                broadcastDone({ userId: body.userId, sandboxId: body.sandboxId, jobId, exitCode: 0 })
-              } catch (parseError) {
-                // Fallback to raw output if JSON parsing fails
-                broadcastLog({ userId: body.userId, sandboxId: body.sandboxId, jobId, data: "json parse failed, using raw output" })
-                broadcastResult({ 
-                  userId: body.userId, 
-                  sandboxId: body.sandboxId, 
-                  jobId, 
-                  format: "text", 
-                  data: result.stdout 
-                })
-                broadcastDone({ userId: body.userId, sandboxId: body.sandboxId, jobId, exitCode: 0 })
-              }
-            } else {
-              broadcastError({ 
-                userId: body.userId, 
-                sandboxId: body.sandboxId, 
-                jobId, 
-                code: "CLAUDE_COMMAND_FAILED", 
-                message: `Claude command failed with exit code ${result.exitCode}: ${result.stderr}` 
-              })
-              broadcastDone({ userId: body.userId, sandboxId: body.sandboxId, jobId, exitCode: result.exitCode })
-            }
-          } catch (error: any) {
-            const msg = String(error?.message || error)
-            broadcastError({ userId: body.userId, sandboxId: body.sandboxId, jobId, code: "EXECUTION_ERROR", message: msg })
-            broadcastDone({ userId: body.userId, sandboxId: body.sandboxId, jobId, exitCode: 1 })
+        // Trigger Inngest function to handle the processing and real-time events
+        console.log("🔥 About to trigger Inngest function with data:", {
+          name: "omni/process.knowledge",
+          data: {
+            taskId: body.taskId,
+            sandboxId: body.sandboxId,
+            userId: body.userId,
+            input: body.input,
+            model: body.model,
+            jobId,
           }
-        })()
+        })
+        
+        yield* Effect.promise(() => inngest.send({
+          name: "omni/process.knowledge",
+          data: {
+            taskId: body.taskId,
+            sandboxId: body.sandboxId,
+            userId: body.userId,
+            input: body.input,
+            model: body.model,
+            jobId,
+          }
+        }).then(result => {
+          console.log("✅ Inngest send successful:", result)
+          return result
+        }).catch(error => {
+          console.error("❌ Inngest send failed:", error)
+          throw error
+        }))
         
         return json({ jobId, accepted: true }, { status: 202 })
       })
@@ -270,6 +215,11 @@ const server = Bun.serve({
     if (url.pathname === "/api/knowledge/query") {
       if (req.method !== "GET") return methodNotAllowed()
       return json({ entities: [], tasks: [], patterns: [] })
+    }
+
+    // Inngest API route
+    if (url.pathname === "/api/inngest") {
+      return inngestHandler(req)
     }
 
     return notFound()

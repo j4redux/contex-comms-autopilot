@@ -11,7 +11,7 @@
     "kill:8787": "bash -lc 'pids=$(lsof -tiTCP:8787 -sTCP:LISTEN || true); if [ -n \"$pids\" ]; then kill -TERM $pids || true; sleep 1; pids2=$(lsof -tiTCP:8787 -sTCP:LISTEN || true); if [ -n \"$pids2\" ]; then kill -KILL $pids2 || true; fi; fi'",
     "kill:port": "bash -lc 'port=${PORT:-8787}; pids=$(lsof -tiTCP:$port -sTCP:LISTEN || true); if [ -n \"$pids\" ]; then kill -TERM $pids || true; sleep 1; pids2=$(lsof -tiTCP:$port -sTCP:LISTEN || true); if [ -n \"$pids2\" ]; then kill -KILL $pids2 || true; fi; fi'",
     "test:snapshot": "bun run tests/01-snapshot-test.ts",
-    "test:claude": "bun run tests/02-claude-execution-test.ts", 
+    "test:claude": "bun run tests/02-claude-execution-test.ts",
     "test:session": "bun run tests/03-session-management-test.ts",
     "test:api": "bun run tests/05-api-endpoint-test.ts",
     "test:all": "bun run test:snapshot && bun run test:claude && bun run test:session && bun run test:api"
@@ -19,8 +19,10 @@
   "dependencies": {
     "@daytonaio/sdk": "0.25.5",
     "@effect/schema": "^0.68.2",
+    "@inngest/realtime": "^0.3.1",
     "dotenv": "^16.4.5",
-    "effect": "^3.5.4"
+    "effect": "^3.5.4",
+    "inngest": "^3.39.1"
   },
   "devDependencies": {
     "@types/bun": "1.2.20",

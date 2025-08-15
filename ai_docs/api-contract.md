@@ -58,14 +58,15 @@ Errors
 
 ## POST /api/knowledge/process
 
-Execute a processing command inside a running sandbox. Intended to stream logs/results over WebSocket. If WS is not connected, server should buffer minimal recent lines and return them once streaming is wired; however, production must use WS.
+Execute a processing command inside a running sandbox via Inngest function. Streams logs/results over Inngest real-time channels for job durability and retry capabilities.
 
 Request
 ```json
 {
   "input": "string",
-  "sandboxId": "string",
+  "sandboxId": "string", 
   "userId": "string",
+  "taskId": "string",     // required, UUID for frontend task correlation
   "model": "sonnet" | "haiku"  // optional, Claude model to use (default: sonnet)
   "env": { "KEY": "VALUE" }   // optional, additional env vars for the process
 }
@@ -77,16 +78,18 @@ Response 202
 ```
 
 Server behavior
-- Uses VibeKit pattern: `echo "input" | claude -p --output-format json --model <model>` inside sandbox
-- Environment variables passed via sandbox creation (USER_ID, ANTHROPIC_API_KEY)
-- Streams execution logs to WS channel `userId` with message schema below.
-- Parses JSON response and emits result, then terminal done message.
+- Triggers Inngest function `omni/process.knowledge` with request data
+- Uses Claude Code pattern: `echo "input" | claude -p --output-format json --model <model>` inside sandbox
+- Environment variables: USER_ID, ANTHROPIC_API_KEY available in sandbox
+- Streams execution logs via Inngest real-time channels to frontend
+- Includes comprehensive pre-flight checks (Claude CLI, API key, network connectivity)
+- Parses JSON response and emits result, then completion status
 
 Errors
-- 400: validation failed
+- 400: validation failed (missing taskId, input, sandboxId, userId)
 - 404: sandbox not found
 - 409: sandbox not ready
-- 500: execution error inside sandbox or Daytona API error
+- 500: Inngest trigger failure or Daytona API error
 
 ---
 
@@ -103,24 +106,98 @@ Response 200
 
 ---
 
-## GET /ws?userId=...
+## GET /api/inngest
 
-WebSocket endpoint for streaming logs and results to the client.
+Inngest function registration endpoint for development and production deployment.
 
-Messages from server to client (newline-delimited JSON):
+Response 200
 ```json
-{ "type": "log", "sandboxId": "string", "jobId": "string", "level": "info"|"error", "ts": number, "data": "string" }
-{ "type": "result", "sandboxId": "string", "jobId": "string", "ts": number, "data": any }
-{ "type": "error", "sandboxId": "string", "jobId": "string", "ts": number, "code": "string", "message": "string" }
-{ "type": "done", "sandboxId": "string", "jobId": "string", "ts": number, "exitCode": number }
-{ "type": "heartbeat", "ts": number }
+{
+  "authentication_succeeded": null,
+  "extra": { "is_mode_explicit": false },
+  "has_event_key": true,
+  "has_signing_key": true, 
+  "function_count": 1,
+  "mode": "dev",
+  "schema_version": "2024-05-24"
+}
 ```
 
-Client to server (optional control):
+Functions registered:
+- `process-knowledge`: Handles `omni/process.knowledge` events for Claude Code execution
+
+---
+
+## Inngest Real-time Streaming
+
+Real-time streaming is handled via Inngest channels instead of WebSocket. Frontend subscribes to `taskChannel` with topics `update` and `status`.
+
+### Channel: `tasks`
+
+#### Topic: `update` 
+Messages from Inngest functions to frontend:
 ```json
-{ "type": "subscribe", "userId": "string" }
-{ "type": "ping" }
+{
+  "taskId": "string",
+  "message": {
+    "type": "log",
+    "data": "string", 
+    "jobId": "string",
+    "ts": number
+  }
+}
 ```
 
-Notes
-- One WS connection per signed-in user recommended. Server routes messages by `userId`. In prod, require JWT.
+```json
+{
+  "taskId": "string", 
+  "message": {
+    "type": "result",
+    "format": "text",
+    "data": "string",
+    "jobId": "string", 
+    "ts": number
+  }
+}
+```
+
+```json
+{
+  "taskId": "string",
+  "message": {
+    "type": "error",
+    "code": "string",
+    "message": "string",
+    "jobId": "string",
+    "ts": number
+  }
+}
+```
+
+```json
+{
+  "taskId": "string",
+  "message": {
+    "type": "done", 
+    "exitCode": number,
+    "jobId": "string",
+    "ts": number
+  }
+}
+```
+
+#### Topic: `status`
+Task lifecycle updates:
+```json
+{
+  "taskId": "string",
+  "status": "IN_PROGRESS" | "DONE" | "MERGED",
+  "sessionId": "string"
+}
+```
+
+### Frontend Integration
+- Frontend uses `@inngest/realtime` to subscribe to channels
+- Real-time updates flow directly from Inngest functions to UI
+- Built-in retry logic and job durability
+- Better error handling and monitoring via Inngest dashboard
