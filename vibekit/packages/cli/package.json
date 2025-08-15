@@ -1,0 +1,47 @@
+{
+  "name": "vibekit",
+  "version": "0.0.1-rc.29",
+  "description": "Run Claude Code, Gemini, Codex — or any coding agent — in a clean, isolated sandbox with sensitive data redaction and observability baked in.",
+  "main": "dist/cli.js",
+  "type": "module",
+  "bin": {
+    "vibekit": "./dist/cli.js"
+  },
+  "files": [
+    "dist/**/*",
+    "Dockerfile"
+  ],
+  "scripts": {
+    "build": "tsup",
+    "dev": "tsup src/cli.js --watch",
+    "start": "node dist/cli.js",
+    "type-check": "tsc --noEmit",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "cli",
+    "coding-agents",
+    "claude",
+    "gemini",
+    "sandbox",
+    "logging"
+  ],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "cfonts": "^3.3.0",
+    "chalk": "^5.3.0",
+    "commander": "^11.0.0",
+    "fs-extra": "^11.1.1",
+    "ink": "^6.1.0",
+    "js-yaml": "^4.1.0",
+    "open": "^8.4.0",
+    "react": "^19.1.1",
+    "redact-pii": "^3.4.0"
+  },
+  "devDependencies": {
+    "@types/node": "^24.1.0",
+    "tsup": "^8.5.0",
+    "typescript": "^5.9.2"
+  }
+}
