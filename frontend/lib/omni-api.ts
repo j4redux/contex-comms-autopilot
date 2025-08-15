@@ -13,6 +13,7 @@ export interface ProcessKnowledgeRequest {
   input: string
   sandboxId: string
   userId: string
+  taskId: string
   model?: string
   env?: Record<string, string>
 }

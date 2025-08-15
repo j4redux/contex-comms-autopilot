@@ -18,6 +18,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
+import { omniWebSocket } from "@/lib/omni-websocket";
 
 interface Props {
   id: string;
@@ -221,6 +222,33 @@ export default function TaskClientPage({ id }: Props) {
       });
     }
   }, []);
+
+  // WebSocket connection for real-time streaming from backend
+  useEffect(() => {
+    const userId = process.env.NEXT_PUBLIC_DEV_USER_ID;
+    if (!userId) {
+      console.warn('No DEV_USER_ID configured, WebSocket streaming disabled');
+      return;
+    }
+
+    // Connect WebSocket for real-time streaming
+    const handleWebSocketMessage = (taskId: string, message: any) => {
+      console.log('📨 WebSocket message for task:', taskId, message);
+      
+      // If message is for this task, add it to task messages
+      if (taskId === id || task?.sessionId === taskId) {
+        updateTask(id, {
+          messages: [...(task?.messages || []), message],
+        });
+      }
+    };
+
+    omniWebSocket.connect(userId, handleWebSocketMessage);
+    
+    return () => {
+      omniWebSocket.disconnect();
+    };
+  }, [id, task?.sessionId, updateTask]);
 
   // Cleanup subscription on unmount to prevent stream cancellation errors
   useEffect(() => {

@@ -59,6 +59,7 @@ export const createTask = inngest.createFunction(
         input: prompt || task.title,
         sandboxId: sandbox.id,
         userId: userId,
+        taskId: task.id, // Pass original task ID for proper routing
         model: "sonnet", // Default to Claude Sonnet
       });
 

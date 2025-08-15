@@ -20,43 +20,32 @@ export const createTaskAction = async ({
   sessionId?: string;
   prompt?: string;
 }) => {
-  const cookieStore = await cookies();
-  const githubToken = cookieStore.get("github_access_token")?.value;
-
-  if (!githubToken) {
-    throw new Error("No GitHub token found. Please authenticate first.");
+  // Get userId from environment for development (no auth required)
+  const userId = process.env.NEXT_PUBLIC_DEV_USER_ID;
+  
+  if (!userId) {
+    throw new Error("No user ID configured. Set NEXT_PUBLIC_DEV_USER_ID in environment.");
   }
 
+  // Send Omni-compatible event with correct data structure
   await inngest.send({
-    name: "clonedex/create.task",
+    name: "omni/create.task", // Changed from "clonedx/create.task"
     data: {
       task,
-      token: githubToken,
-      sessionId: sessionId,
-      prompt: prompt,
+      userId, // Use environment user ID instead of GitHub token
+      prompt: prompt || task.title, // Use prompt or fallback to task title
     },
   });
 };
 
+// Pull request functionality not needed for Project Omni
+// Omni focuses on investor materials, not code PRs  
 export const createPullRequestAction = async ({
   sessionId,
 }: {
   sessionId?: string;
 }) => {
-  const cookieStore = await cookies();
-  const githubToken = cookieStore.get("github_access_token")?.value;
-
-  if (!githubToken) {
-    throw new Error("No GitHub token found. Please authenticate first.");
-  }
-
-  await inngest.send({
-    name: "clonedex/create.pull-request",
-    data: {
-      token: githubToken,
-      sessionId: sessionId,
-    },
-  });
+  throw new Error("Pull request creation not implemented for Project Omni. Focus is on investor materials.");
 };
 
 export async function fetchRealtimeSubscriptionToken(): Promise<TaskChannelToken> {

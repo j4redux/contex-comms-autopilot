@@ -60,20 +60,27 @@ export default function Container({ children }: { children: React.ReactNode }) {
         });
       }
 
+      // Handle our new Inngest message format from the backend
       if (
         latestData.data.message.type === "message" &&
-        latestData.data.message.status === "completed" &&
         latestData.data.message.role === "assistant"
       ) {
         const task = getTaskById(latestData.data.taskId);
-
+        
         updateTask(latestData.data.taskId, {
           messages: [
             ...(task?.messages || []),
             {
               role: "assistant",
-              type: "message",
-              data: (latestData.data.message.content as { text: string }[])[0],
+              type: "message", 
+              data: {
+                text: latestData.data.message.data.text,
+                id: latestData.data.message.data.id,
+                isStreaming: latestData.data.message.data.isStreaming,
+                streamId: latestData.data.message.data.streamId,
+                jobId: latestData.data.message.data.jobId,
+                ts: latestData.data.message.data.ts,
+              },
             },
           ],
         });
