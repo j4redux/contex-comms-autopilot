@@ -8,8 +8,8 @@ Authoritative documentation for handoff and ongoing development.
 - [spec.md](./spec.md) ← **PRODUCT SPECIFICATION** - what we're building and why
 - [claude-code-daytona-integration.md](./claude-code-daytona-integration.md) ← **TECHNICAL MASTER** - proven implementation patterns
 - [onboarding-quickstart.md](./onboarding-quickstart.md) ← start here for quick setup
-- [api-contract.md](./api-contract.md) - REST API endpoints
-- [ws-streaming-design.md](./ws-streaming-design.md) - WebSocket streaming protocol  
+- [api-contract.md](./api-contract.md) - REST API endpoints and Inngest integration
+- [inngest-streaming-design.md](./inngest-streaming-design.md) - Inngest real-time streaming protocol  
 - [testing-plan.md](./testing-plan.md) - test strategy and structure
 
 **Reference Documentation:**
@@ -29,4 +29,5 @@ For complete implementation details, see `claude-code-daytona-integration.md`.
 
 Run tasks one-at-a-time to avoid port conflicts:
 - Terminal A: `cd server && bun run start`
-- Terminal B: `cd server && bun run scripts/e2e-process.ts`
+- Terminal B: `npx inngest-cli dev` (for Inngest Dev Server)  
+- Terminal C: `cd server && bun run scripts/e2e-inngest-process.ts`

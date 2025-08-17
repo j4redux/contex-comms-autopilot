@@ -5,6 +5,25 @@ import { useEffect } from "react";
 import { fetchRealtimeSubscriptionToken } from "@/app/actions/inngest";
 import { useTaskStore } from "@/stores/tasks";
 
+// Type definitions for Inngest message data
+interface InngestMessageData {
+  text?: string;
+  id?: string;
+  isStreaming?: boolean;
+  streamId?: string;
+  jobId?: string;
+  ts?: number;
+  [key: string]: any; // Allow additional properties
+}
+
+interface InngestMessage {
+  type: string;
+  role?: string;
+  data?: InngestMessageData;
+  action?: { command: string[] };
+  output?: string;
+}
+
 export default function Container({ children }: { children: React.ReactNode }) {
   const { updateTask, getTaskById } = useTaskStore();
   const { latestData } = useInngestSubscription({
@@ -31,10 +50,9 @@ export default function Container({ children }: { children: React.ReactNode }) {
 
       if (latestData.data.message.type === "local_shell_call") {
         const task = getTaskById(latestData.data.taskId);
+        const message = latestData.data.message as unknown as InngestMessage;
         updateTask(latestData.data.taskId, {
-          statusMessage: `Running command ${(
-            latestData.data.message as { action: { command: string[] } }
-          ).action.command.join(" ")}`,
+          statusMessage: `Running command ${message.action?.command?.join(" ") || "unknown command"}`,
           messages: [
             ...(task?.messages || []),
             {
@@ -74,19 +92,19 @@ export default function Container({ children }: { children: React.ReactNode }) {
               role: "assistant",
               type: "message", 
               data: {
-                text: latestData.data.message.data.text,
-                id: latestData.data.message.data.id,
-                isStreaming: latestData.data.message.data.isStreaming,
-                streamId: latestData.data.message.data.streamId,
-                jobId: latestData.data.message.data.jobId,
-                ts: latestData.data.message.data.ts,
+                text: (latestData.data.message as unknown as InngestMessage).data?.text,
+                id: (latestData.data.message as unknown as InngestMessage).data?.id,
+                isStreaming: (latestData.data.message as unknown as InngestMessage).data?.isStreaming,
+                streamId: (latestData.data.message as unknown as InngestMessage).data?.streamId,
+                jobId: (latestData.data.message as unknown as InngestMessage).data?.jobId,
+                ts: (latestData.data.message as unknown as InngestMessage).data?.ts,
               },
             },
           ],
         });
       }
     }
-  }, [latestData]);
+  }, [latestData, updateTask, getTaskById]);
 
   return children;
 }

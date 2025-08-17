@@ -6,8 +6,9 @@ Use this as a PR checklist and pre-release gate.
 
 ## Authentication & Authorization
 - [ ] JWT access + refresh tokens implemented
-- [ ] WS authenticates via token; per-user channel isolation
+- [ ] Inngest channel subscriptions authenticate via token; per-user task isolation
 - [ ] Least privilege for server and CI credentials
+- [ ] Inngest signing keys secured and environment-specific
 
 ## Input Validation & Output Encoding
 - [ ] All endpoints validated with `@effect/schema` (or equivalent)
@@ -16,13 +17,16 @@ Use this as a PR checklist and pre-release gate.
 
 ## Rate Limiting & Abuse Prevention
 - [ ] Per-IP and per-user limits for create/process
-- [ ] WS connection limits and message rate limits
+- [ ] Inngest function rate limiting and concurrency controls
 - [ ] Backoff on repeated failures
+- [ ] Channel subscription limits per user
 
 ## Secrets Management
 - [ ] No secrets committed; dev-only `.env`
 - [ ] Staging/prod secrets injected via manager (AWS SM, 1Password, Doppler, Vault)
 - [ ] Rotation plan documented
+- [ ] Inngest signing keys rotated regularly
+- [ ] Separate Inngest event keys per environment
 
 ## Sandbox Isolation
 - [ ] Per-user sandbox isolation policy documented
@@ -43,5 +47,7 @@ Use this as a PR checklist and pre-release gate.
 - [ ] Retention policies documented and implemented
 
 ## Reviews & Tests
-- [ ] Security review of CL changes affecting Dockerfile, Daytona usage, WS auth
-- [ ] E2E tests hit real Daytona; no mocks in release tests
+- [ ] Security review of CL changes affecting Dockerfile, Daytona usage, Inngest functions
+- [ ] E2E tests hit real Daytona and Inngest; no mocks in release tests
+- [ ] Function security: validate all Inngest event payloads
+- [ ] Channel security: ensure proper task ID correlation prevents cross-user data leaks

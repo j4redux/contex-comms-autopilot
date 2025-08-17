@@ -4,6 +4,7 @@
 import { Inngest } from "inngest"
 import { realtimeMiddleware, channel, topic } from "@inngest/realtime"
 import { executeCommand } from "./daytona"
+import { createSandbox } from "./sandbox"
 
 // Create backend Inngest client with realtime middleware
 export const inngest = new Inngest({
@@ -26,6 +27,53 @@ export const taskChannel = channel("tasks")
       message: Record<string, unknown>;
     }>()
   )
+
+// Task creation function - handles frontend task creation requests
+export const createTask = inngest.createFunction(
+  { id: "create-task" },
+  { event: "omni/create.task" },
+  async ({ event, step }) => {
+    const { task, userId, prompt } = event.data;
+    
+    console.log("🎯 Creating task:", { taskId: task.id, userId, prompt: prompt?.substring(0, 50) + "..." });
+    
+    try {
+      // Step 1: Create/ensure sandbox exists and is ready
+      const sandbox = await step.run("ensure-sandbox", async () => {
+        console.log("📦 Ensuring sandbox for user:", userId);
+        const sb = await createSandbox(userId);
+        console.log("✅ Sandbox ready:", { sandboxId: sb.id, status: sb.status });
+        return sb;
+      });
+      
+      // Step 2: Trigger knowledge processing with proper data structure
+      await step.run("trigger-processing", async () => {
+        const jobId = `job_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+        
+        console.log("🧠 Triggering knowledge processing:", { taskId: task.id, sandboxId: sandbox.id, jobId });
+        
+        await inngest.send({
+          name: "omni/process.knowledge",
+          data: {
+            taskId: task.id,
+            sandboxId: sandbox.id,
+            userId,
+            input: prompt,
+            model: "sonnet", // Default model
+            jobId,
+          },
+        });
+        
+        console.log("✅ Knowledge processing triggered successfully");
+        return { jobId, accepted: true };
+      });
+      
+    } catch (error) {
+      console.error("❌ Task creation failed:", error);
+      throw error;
+    }
+  }
+)
 
 // Full Claude Code processing function (restored from original WebSocket implementation)
 export const processKnowledge = inngest.createFunction(

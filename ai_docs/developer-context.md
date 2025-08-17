@@ -4,9 +4,9 @@
 
 **Project Omni** is an AI-powered tool that transforms founder "brain dumps" into professional investor-ready materials (updates, memos, fundraising documents) in minutes. The system uses Claude Code running in isolated Daytona sandboxes to process unstructured founder thoughts into structured business intelligence and polished deliverables.
 
-**Current Status**: MVP Day 2+ Major Progress - Core integration working, end-to-end Claude processing verified  
+**Current Status**: MVP Day 2+ COMPLETE - Pure Inngest event-driven architecture implemented and verified  
 **Timeline**: 3-day MVP sprint for design partner testing  
-**Last Updated**: August 15, 2025
+**Last Updated**: August 16, 2025
 
 ---
 
@@ -31,20 +31,22 @@ Founders spend precious hours writing investor updates and memos that determine 
 
 ## Technical Architecture
 
-### Three-Tier System
+### Pure Event-Driven Architecture
 
 ```
 ┌─────────────────┐    ┌──────────────────┐    ┌─────────────────────┐
 │   Frontend      │    │     Backend      │    │    Processing       │
 │   (Next.js)     │◄──►│  (Bun + Effect)  │◄──►│  (Claude + Daytona) │
 │                 │    │                  │    │                     │
-│ • React UI      │    │ • REST API       │    │ • Claude Code 1.0.80│
-│ • Inngest Jobs  │    │ • Inngest Funcs  │    │ • Isolated Sandboxes│
-│ • Real-time UI  │    │ • Sandbox Mgmt   │    │ • Knowledge Files   │
+│ • React UI      │    │ • Inngest Funcs  │    │ • Claude Code 1.0.80│
+│ • Inngest Events│    │ • createTask     │    │ • Isolated Sandboxes│
+│ • Real-time UI  │    │ • processKnowledge│    │ • Knowledge Files   │
 └─────────────────┘    └──────────────────┘    └─────────────────────┘
        ▲                                                     
        │                                                     
        └─────────── Inngest Real-time Channels ─────────────┘
+
+Event Flow: Frontend → "omni/create.task" → createTask → "omni/process.knowledge" → processKnowledge
 ```
 
 ### Core Components
@@ -58,7 +60,8 @@ Founders spend precious hours writing investor updates and memos that determine 
 
 2. **Backend** (`/server/`)
    - **Runtime**: Bun with TypeScript + Effect for async composition
-   - **APIs**: REST endpoints + Inngest function orchestration
+   - **Architecture**: Pure Inngest event-driven functions (no REST APIs for processing)
+   - **Functions**: `createTask` + `processKnowledge` with real-time streaming
    - **Sandboxes**: Daytona SDK integration for container orchestration
    - **Processing**: Claude Code execution via Inngest functions in isolated environments
 
@@ -95,11 +98,19 @@ Founders spend precious hours writing investor updates and memos that determine 
 - ✅ Progress tracking system
 - ✅ API contracts and specifications
 
-### ✅ Completed (Day 2 - Core Integration)
+### ✅ Completed (Day 2+ - Architecture Fixed)
+
+**CRITICAL ARCHITECTURE CORRECTION**:
+- ✅ **Fixed event-driven flow**: Frontend sends `"omni/create.task"` events
+- ✅ **Added missing createTask function**: Handles frontend task creation events
+- ✅ **Proper function chaining**: createTask → `"omni/process.knowledge"` → processKnowledge
+- ✅ **Verified 2-function registration**: Both functions registered and operational
+- ✅ **End-to-end event flow working**: Task creation through Claude processing
 
 **MVP Core Integration Achieved**:
-- ✅ Connect frontend to backend APIs via Inngest (replaced stub client)
-- ✅ Implement real-time streaming via Inngest channels (replaced WebSocket)
+- ✅ Pure Inngest event-driven architecture (no REST API calls for processing)
+- ✅ Real-time streaming via Inngest channels with `taskChannel().update()`
+- ✅ Task correlation via `taskId` across the entire pipeline
 - ✅ End-to-end testing with real Claude processing (verified with math operations)
 - ✅ Full Inngest function architecture for job durability and retry logic
 - ✅ Comprehensive error handling and logging for debugging
@@ -125,10 +136,10 @@ project-omni/
 ├── frontend/                    # Next.js web application
 │   ├── app/                     # Next.js App Router
 │   │   ├── _components/         # Shared UI components
-│   │   │   ├── task-form.tsx    # Main input form (needs founder customization)
+│   │   │   ├── task-form.tsx    # Main input form (sends Inngest events)
 │   │   │   └── task-list.tsx    # Task management UI
 │   │   ├── actions/             # Server actions
-│   │   │   └── inngest.ts       # Inngest job orchestration
+│   │   │   └── inngest.ts       # 🔑 INNGEST EVENT SENDER (createTaskAction)
 │   │   ├── api/                 # API routes
 │   │   │   └── inngest/         # Inngest webhook endpoint
 │   │   └── task/[id]/           # Task detail pages
@@ -137,12 +148,11 @@ project-omni/
 │   │   ├── ui/                  # Shadcn/UI components
 │   │   └── *.tsx               # Custom components
 │   ├── lib/                     # Core utilities and clients
-│   │   ├── omni-api.ts         # 🔑 PROJECT OMNI API CLIENT
-│   │   ├── inngest.ts          # Inngest configuration and functions
+│   │   ├── inngest.ts          # 🔑 INNGEST CLIENT (sends events)
 │   │   └── utils.ts            # Utility functions
 │   ├── stores/                  # Zustand state management
 │   │   ├── tasks.ts            # Task state (main entity)
-│   │   └── environments.ts     # Legacy (not needed for Omni)
+│   │   └── [REMOVED]           # environments.ts deleted (not needed)
 │   ├── .env.local              # Environment variables (git ignored)
 │   ├── .env.example            # Environment template
 │   └── package.json            # Dependencies and scripts
@@ -150,12 +160,15 @@ project-omni/
 ├── server/                     # Bun backend server
 │   ├── src/
 │   │   ├── index.ts           # 🔑 MAIN SERVER FILE
+│   │   ├── api/
+│   │   │   └── inngest.ts     # 🔑 INNGEST FUNCTION REGISTRATION
 │   │   └── services/
 │   │       ├── config.ts      # Environment configuration
 │   │       ├── daytona.ts     # Daytona SDK integration
 │   │       ├── sandbox.ts     # Sandbox management logic
-│   │       └── ws.ts          # WebSocket streaming
-│   ├── tests/                 # Integration tests
+│   │       └── inngest.ts     # 🔑 INNGEST FUNCTIONS (createTask + processKnowledge)
+│   ├── scripts/               # Testing scripts
+│   │   └── e2e-inngest-process.ts  # E2E test for Inngest architecture
 │   ├── package.json           # Server dependencies
 │   └── bun.lock              # Lock file
 │
@@ -179,10 +192,11 @@ project-omni/
 
 **Critical Files to Understand**:
 1. `/ai_docs/spec.md` - Product specification and business requirements
-2. `/frontend/lib/omni-api.ts` - API client (replaces VibeKit SDK)
-3. `/server/src/index.ts` - Main server with API endpoints
-4. `/frontend/app/_components/task-form.tsx` - Main UI entry point
-5. `/ai_docs/mvp-implementation-plan.md` - Complete technical plan
+2. `/server/src/services/inngest.ts` - **Core backend logic** (createTask + processKnowledge functions)
+3. `/frontend/app/actions/inngest.ts` - **Frontend event sender** (createTaskAction)
+4. `/server/src/api/inngest.ts` - **Function registration** (serves Inngest functions)
+5. `/frontend/app/_components/task-form.tsx` - Main UI entry point
+6. `/ai_docs/mvp-implementation-plan.md` - Complete technical plan
 
 **Configuration Files**:
 - `/frontend/.env.local` - Frontend environment variables
@@ -237,16 +251,14 @@ project-omni/
 
 **Frontend Environment** (`.env.local`):
 ```bash
-# Project Omni Backend URLs
-NEXT_PUBLIC_OMNI_API_URL=http://localhost:8787
-NEXT_PUBLIC_OMNI_WS_URL=ws://localhost:8787/ws
-
-# Inngest Configuration
+# Inngest Configuration (core event system)
 INNGEST_EVENT_KEY=your-inngest-event-key-here
 INNGEST_SIGNING_KEY=your-inngest-signing-key-here
 
 # Development user ID (for testing without auth)
 NEXT_PUBLIC_DEV_USER_ID=dev-user-001
+
+# NOTE: No WebSocket URLs - pure Inngest architecture
 ```
 
 **Backend Environment** (server needs):
@@ -267,74 +279,83 @@ JWT_SECRET=your-jwt-secret  # For production
 
 ## API Contracts & Data Flow
 
-### REST API Endpoints
+### Inngest Event API
 
-**Backend Server** (`http://localhost:8787`):
+**Event-Driven Architecture** (Pure Inngest):
 
 ```typescript
-// Sandbox Management
-POST /api/sandbox/create
-Body: { userId: string }
-Response: { sandboxId: string, status: string }
-
-GET /api/sandbox/status?id={sandboxId}
-Response: { sandboxId: string, status: string, createdAt: number }
-
-// Knowledge Processing
-POST /api/knowledge/process  
-Body: { 
-  input: string,           // Founder brain dump
-  sandboxId: string, 
-  userId: string,
-  model?: string           // Claude model (default: "sonnet")
+// Task Creation Event (Frontend → Backend)
+Event: "omni/create.task"
+Data: {
+  task: Task,              // Complete task object with ID
+  userId: string,          // User identifier
+  prompt: string           // Founder brain dump input
 }
-Response: { jobId: string, accepted: boolean }
+Triggers: createTask function
 
-// Knowledge Query (future)
-GET /api/knowledge/query?userId={userId}&query={query}
-Response: { entities: [], tasks: [], patterns: [] }
+// Knowledge Processing Event (Internal)
+Event: "omni/process.knowledge"
+Data: {
+  taskId: string,          // Task correlation ID
+  sandboxId: string,       // Daytona sandbox identifier
+  userId: string,          // User identifier
+  input: string,           // Processing input
+  model: string,           // Claude model ("sonnet")
+  jobId: string            // Job correlation ID
+}
+Triggers: processKnowledge function
+
+// Real-time Updates (Backend → Frontend)
+Channel: taskChannel()
+Topics: 
+  - update(taskId, message)  // Processing logs and results
+  - status(taskId, status)   // Task status changes
 ```
 
-**WebSocket Streaming** (`ws://localhost:8787/ws`):
+**Inngest Real-time Channels** (No WebSocket):
 
 ```typescript
-// Connection
-ws://localhost:8787/ws?userId={userId}  // Development
-// Production: Authorization: Bearer {jwt-token}
+// Channel Definition
+const taskChannel = channel("tasks")
+  .addTopic(topic("status").type<{
+    taskId: string;
+    status: "IN_PROGRESS" | "DONE" | "MERGED";
+    sessionId: string;
+  }>())
+  .addTopic(topic("update").type<{
+    taskId: string;
+    message: Record<string, unknown>;
+  }>())
 
-// Message Types
+// Message Types (via publish to channels)
 {
   type: "log",
-  userId: string,
-  sandboxId: string, 
+  data: string,             // Real-time processing logs
   jobId: string,
-  data: string              // Real-time processing logs
+  ts: number
 }
 
 {
   type: "result", 
-  userId: string,
-  sandboxId: string,
+  format: "text",
+  data: string,             // Final output/deliverables
   jobId: string,
-  format: "text" | "json",
-  data: string              // Final output/deliverables
+  ts: number
 }
 
 {
   type: "error",
-  userId: string, 
-  sandboxId: string,
-  jobId: string,
   code: string,
-  message: string
+  message: string,
+  jobId: string,
+  ts: number
 }
 
 {
   type: "done",
-  userId: string,
-  sandboxId: string, 
+  exitCode: number,
   jobId: string,
-  exitCode: number
+  ts: number
 }
 ```
 
@@ -370,17 +391,23 @@ interface Sandbox {
 ```
 1. User Input (Founder brain dump)
    ↓
-2. Frontend → createTask() → Inngest Job
+2. Frontend → inngest.send("omni/create.task")
    ↓  
-3. Inngest → ensureSandbox() → Omni API
+3. Backend → createTask function receives event
    ↓
-4. Backend → createSandbox() or reuseSandbox()
+4. createTask → createSandbox() (ensure sandbox ready)
    ↓
-5. Backend → processKnowledge() → Claude Code in Sandbox
+5. createTask → inngest.send("omni/process.knowledge")
    ↓
-6. WebSocket → Real-time streaming to Frontend
+6. Backend → processKnowledge function receives event
+   ↓
+7. processKnowledge → Claude Code execution in sandbox
+   ↓
+8. processKnowledge → publish to taskChannel().update()
+   ↓
+9. Frontend → Real-time updates via Inngest channels
    ↓ 
-7. Results → Structured knowledge + investor deliverables
+10. Results → Structured knowledge + investor deliverables
 ```
 
 ---
@@ -734,14 +761,15 @@ lsof -ti:8787 | xargs kill  # Backend
 
 **Frontend Debug**:
 - Open browser dev tools
-- Check Network tab for API calls
-- Monitor WebSocket connections
-- Review React dev tools
+- Check Network tab for Inngest webhook calls
+- Monitor Inngest dashboard at http://localhost:8288
+- Review React dev tools and state management
 
 **Backend Debug**:
 - Enable verbose logging in config
 - Use Bun's built-in debugger
-- Monitor WebSocket connections
+- Monitor Inngest function execution
+- Check server logs for function registration (should show 2 functions)
 - Check sandbox logs via Daytona
 
 ---
@@ -779,5 +807,5 @@ lsof -ti:8787 | xargs kill  # Backend
 
 ---
 
-*Last Updated: August 15, 2025 - Day 2 Core Integration Complete*  
+*Last Updated: August 16, 2025 - Pure Inngest Architecture Verified*  
 *Next Update: After Day 3 UI Polish & Testing*

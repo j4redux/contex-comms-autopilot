@@ -220,120 +220,148 @@ interface SandboxStore {
 
 ---
 
-## API Integration Details
+## Inngest Event Integration (Actual Implementation)
 
-### REST Endpoints Integration
+### Frontend Event Sending
 
 ```typescript
-// lib/omni-api.ts
+// frontend/app/actions/inngest.ts
 
-export class OmniApiClient {
-  constructor(private baseUrl: string = 'http://localhost:8787') {}
+import { inngest } from "@/lib/inngest"
+import { Task } from "@/stores/tasks"
 
-  async createSandbox(userId: string): Promise<Sandbox> {
-    // POST /api/sandbox/create
-    const response = await fetch(`${this.baseUrl}/api/sandbox/create`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ userId })
-    })
-    return response.json()
+export const createTaskAction = async ({
+  task,
+  prompt,
+}: {
+  task: Task;
+  prompt?: string;
+}) => {
+  const userId = process.env.NEXT_PUBLIC_DEV_USER_ID;
+  
+  if (!userId) {
+    throw new Error("No user ID configured. Set NEXT_PUBLIC_DEV_USER_ID in environment.");
   }
 
-  async processKnowledge(data: {
-    input: string
-    sandboxId: string  
-    userId: string
-    model?: string
-  }): Promise<{ jobId: string }> {
-    // POST /api/knowledge/process
-    const response = await fetch(`${this.baseUrl}/api/knowledge/process`, {
-      method: 'POST', 
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(data)
-    })
-    return response.json()
-  }
-}
+  // Send Inngest event to trigger backend task creation flow
+  await inngest.send({
+    name: "omni/create.task",
+    data: {
+      task,
+      userId,
+      prompt: prompt || task.title,
+    },
+  });
+};
 ```
 
-### WebSocket Integration
+### Backend Function Implementation
 
 ```typescript
-// lib/omni-websocket.ts
+// server/src/services/inngest.ts
 
-export class OmniWebSocket {
-  private ws: WebSocket | null = null
-
-  connect(userId: string, onMessage: (message: OmniMessage) => void) {
-    this.ws = new WebSocket(`ws://localhost:8787/ws?userId=${userId}`)
-    
-    this.ws.onmessage = (event) => {
-      const message = JSON.parse(event.data)
-      onMessage(this.mapToTaskMessage(message))
-    }
-  }
-
-  private mapToTaskMessage(omniMessage: any): TaskMessage {
-    // Map Omni WebSocket format to existing UI message format
-    switch(omniMessage.type) {
-      case 'log':
-        return {
-          role: 'assistant',
-          type: 'message', 
-          data: { 
-            text: omniMessage.data,
-            isStreaming: true,
-            streamId: omniMessage.jobId 
-          }
-        }
-      case 'result':
-        return {
-          role: 'assistant',
-          type: 'message',
-          data: { 
-            text: omniMessage.data,
-            isStreaming: false 
-          }
-        }
-      // ... other message type mappings
-    }
-  }
-}
-```
-
-### Inngest Integration Bridge
-
-```typescript
-// lib/omni-inngest.ts
-
-export const omniJobFunction = inngest.createFunction(
-  { id: "omni-knowledge-processing" },
-  { event: "omni/process.knowledge" },
+// Task creation function - handles frontend task creation requests
+export const createTask = inngest.createFunction(
+  { id: "create-task" },
+  { event: "omni/create.task" },
   async ({ event, step }) => {
-    const { input, userId, mode } = event.data
+    const { task, userId, prompt } = event.data;
+    
+    try {
+      // Step 1: Create/ensure sandbox exists and is ready
+      const sandbox = await step.run("ensure-sandbox", async () => {
+        return await createSandbox(userId);
+      });
+      
+      // Step 2: Trigger knowledge processing
+      await step.run("trigger-processing", async () => {
+        const jobId = `job_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+        
+        await inngest.send({
+          name: "omni/process.knowledge",
+          data: {
+            taskId: task.id,
+            sandboxId: sandbox.id,
+            userId,
+            input: prompt,
+            model: "sonnet",
+            jobId,
+          },
+        });
+        
+        return { jobId, accepted: true };
+      });
+    } catch (error) {
+      console.error("❌ Task creation failed:", error);
+      throw error;
+    }
+  }
+)
+```
 
-    // Step 1: Ensure sandbox exists  
-    const sandbox = await step.run("create-sandbox", async () => {
-      return omniApi.createSandbox(userId)
-    })
+### Real-time Streaming Implementation
 
-    // Step 2: Process knowledge with retries
-    const result = await step.run("process-knowledge", async () => {
-      return omniApi.processKnowledge({
-        input,
-        sandboxId: sandbox.sandboxId,
-        userId,
-        mode
+```typescript
+// server/src/services/inngest.ts (processKnowledge function)
+
+// Real-time streaming via Inngest channels
+export const processKnowledge = inngest.createFunction(
+  { id: "process-knowledge" },
+  { event: "omni/process.knowledge" },
+  async ({ event, step, publish }) => {
+    const { taskId, sandboxId, userId, input, model, jobId } = event.data;
+    
+    try {
+      // Send initial status
+      await publish(
+        taskChannel().update({
+          taskId,
+          message: {
+            type: "log",
+            data: "job started",
+            jobId,
+            ts: Date.now(),
+          }
+        })
+      )
+
+      // Execute Claude processing
+      const result = await step.run("claude-processing", async () => {
+        // ... Claude Code execution logic
+        
+        // Real-time log streaming
+        await publish(
+          taskChannel().update({
+            taskId,
+            message: {
+              type: "result",
+              format: "text",
+              data: claudeResponse.result,
+              jobId,
+              ts: Date.now(),
+            }
+          })
+        )
+        
+        return { success: true, result: claudeResponse.result }
       })
-    })
-
-    // Step 3: Notify completion
-    await step.run("notify-completion", async () => {
-      // Update task status, send notifications, etc.
-    })
-
-    return result
+      
+      return result
+    } catch (error) {
+      // Error handling with real-time updates
+      await publish(
+        taskChannel().update({
+          taskId,
+          message: {
+            type: "error",
+            code: "EXECUTION_ERROR",
+            message: String(error),
+            jobId,
+            ts: Date.now(),
+          }
+        })
+      )
+    }
   }
 )
 ```

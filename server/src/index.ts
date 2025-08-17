@@ -5,11 +5,9 @@ import { Effect } from "effect"
 import { loadConfig } from "./services/config"
 import { createSandbox, getSandboxStatus } from "./services/sandbox"
 import { executeCommand, executeCommandAsync, getCommandStatus } from "./services/daytona"
-import { broadcastDone, broadcastError, broadcastLog, broadcastResult, register, startHeartbeat, unregister } from "./services/ws"
 import { inngest } from "./services/inngest"
 import { inngestHandler } from "./api/inngest"
 import crypto from "node:crypto"
-import type { ServerWebSocket } from "bun"
 
 type Json = Record<string, unknown> | unknown[] | string | number | boolean | null
 
@@ -78,55 +76,13 @@ function validateProcessBody(raw: unknown): ProcessKnowledgeBody | undefined {
 
 const config = loadConfig()
 
-// WS connection data
-type WsData = { userId: string }
 
-// Start WS heartbeat
-startHeartbeat()
-
-// JWT verification (simplified)
-function verifyJwt(token: string, secret: string): any | undefined {
-  // Simplified for now - in production use proper JWT library
-  try {
-    const parts = token.split(".")
-    if (parts.length !== 3) return undefined
-    const payload = JSON.parse(Buffer.from(parts[1], "base64url").toString("utf8"))
-    return payload
-  } catch {
-    return undefined
-  }
-}
 
 const server = Bun.serve({
   port: config.port,
   fetch(req: Request) {
     const url = new URL(req.url)
 
-    // WebSocket for streaming logs/results
-    if (url.pathname === "/ws") {
-      const env = process.env.NODE_ENV || "development"
-      const dev = env === "development"
-      let userId: string | undefined
-      if (dev) {
-        userId = url.searchParams.get("userId") || undefined
-      } else {
-        // JWT auth for production
-        const auth = req.headers.get("authorization") || ""
-        const token = auth.toLowerCase().startsWith("bearer ") ? auth.slice(7).trim() : ""
-        const payload = token ? verifyJwt(token, config.jwtSecret) : undefined
-        if (payload) {
-          userId = (payload.userId as string) || (payload.sub as string)
-        }
-        if (!userId) {
-          return apiError("UNAUTHORIZED", "JWT required for WebSocket", undefined, 401)
-        }
-      }
-      if (!userId) return apiError("BAD_REQUEST", "Missing userId", undefined, 400)
-      if (server.upgrade(req, { data: { userId } })) {
-        return new Response(undefined, { status: 101 })
-      }
-      return apiError("UPGRADE_FAILED", "WebSocket upgrade failed", undefined, 400)
-    }
 
     // Sandbox creation
     if (url.pathname === "/api/sandbox/create") {
@@ -223,30 +179,6 @@ const server = Bun.serve({
     }
 
     return notFound()
-  },
-  websocket: {
-    open(ws: ServerWebSocket<WsData>) {
-      const data = ws.data!
-      const userId = data.userId
-      register(userId, ws as ServerWebSocket<WsData>)
-      try {
-        ws.send(JSON.stringify({ type: "heartbeat", ts: Date.now() }))
-      } catch {}
-    },
-    message(ws: ServerWebSocket<WsData>, message: string | Buffer) {
-      try {
-        const parsed = typeof message === "string" ? JSON.parse(message) : JSON.parse(Buffer.from(message as any).toString("utf8"))
-        if (parsed?.type === "ping") {
-          ws.send(JSON.stringify({ type: "heartbeat", ts: Date.now() }))
-        }
-      } catch {
-        // ignore
-      }
-    },
-    close(ws: ServerWebSocket<WsData>) {
-      const data = ws.data!
-      unregister(data.userId, ws as ServerWebSocket<WsData>)
-    },
   },
 })
 

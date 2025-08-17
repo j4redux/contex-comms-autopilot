@@ -155,11 +155,15 @@ export async function submitFounderInput(
   // Ensure sandbox exists
   const sandbox = await ensureSandbox(userId)
 
+  // Generate a temporary taskId for API compatibility
+  const taskId = `task_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
+
   // Submit processing request
   const response = await omniApi.processKnowledge({
     input,
     sandboxId: sandbox.id,
     userId,
+    taskId,
     model: 'sonnet', // Default model
   })
 

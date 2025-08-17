@@ -21,7 +21,7 @@ app/
     query.tsx            # Results (future)
 lib/
   api.ts                 # REST client
-  ws.ts                  # WS client
+  inngest-client.ts      # Inngest real-time client
   store.ts               # Zustand stores
   types.ts               # Shared types matching API contract
   theme.ts               # Design tokens
@@ -29,8 +29,8 @@ lib/
 
 ## Data Flow
 - Mutations: TanStack Query → REST endpoints
-- Streaming: singleton WS client `ws.ts` → dispatch to store by `jobId`
-- Query keys: `['sandbox', id]`, `['job', jobId]`, `['results', userId]`
+- Streaming: Inngest real-time client → dispatch to store by `taskId`
+- Query keys: `['sandbox', id]`, `['task', taskId]`, `['results', userId]`
 
 ## Screens (MVP)
 - Dashboard: recent jobs; button to create sandbox
@@ -40,14 +40,14 @@ lib/
 
 ## Error Handling
 - Global error boundary; toast notifications
-- WS reconnect/backoff with visual state
+- Inngest channel reconnect/backoff with visual state
 
 ## Theming & UX
 - NativeWind with a simple token set (colors/spacing/typography)
 - Accessible touch targets and focus styles
 
 ## Security
-- Once JWT exists: attach token to REST and WS
+- Once JWT exists: attach token to REST and Inngest channel subscriptions
 
 ## Testing
 - Unit: component tests with React Testing Library

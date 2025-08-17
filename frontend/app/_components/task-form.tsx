@@ -18,7 +18,7 @@ export default function TaskForm() {
     }
   };
 
-  const handleAddTask = async (mode: "code" | "ask") => {
+  const handleAddTask = async (mode: "process" | "ask") => {
     if (value) {
       const task = addTask({
         title: value,
@@ -26,9 +26,7 @@ export default function TaskForm() {
         description: "",
         messages: [],
         status: "IN_PROGRESS",
-        branch: "", // Not needed for Omni
         sessionId: "",
-        repository: "", // Not needed for Omni
         mode,
       });
       await createTaskAction({ task, prompt: value });
@@ -60,7 +58,7 @@ export default function TaskForm() {
                 <Button variant="outline" onClick={() => handleAddTask("ask")}>
                   Ask
                 </Button>
-                <Button onClick={() => handleAddTask("code")}>Process</Button>
+                <Button onClick={() => handleAddTask("process")}>Process</Button>
               </div>
             )}
           </div>

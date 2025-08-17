@@ -1,12 +1,6 @@
 // stores/useTaskStore.ts
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
-// Local type definition (replacing VibeKit import)
-interface PullRequestResponse {
-  url?: string;
-  number?: number;
-  [key: string]: unknown;
-}
 
 type TaskStatus = "IN_PROGRESS" | "DONE" | "MERGED";
 
@@ -20,16 +14,13 @@ export interface Task {
     data: Record<string, unknown>;
   }[];
   status: TaskStatus;
-  branch: string;
   sessionId: string;
-  repository: string;
   createdAt: string;
   updatedAt: string;
   statusMessage?: string;
   isArchived: boolean;
-  mode: "code" | "ask";
+  mode: "process" | "ask";
   hasChanges: boolean;
-  pullRequest?: PullRequestResponse;
 }
 
 interface TaskStore {

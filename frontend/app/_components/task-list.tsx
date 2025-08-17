@@ -72,7 +72,7 @@ export default function TaskList() {
                           </p>
                           <Dot className="size-4 text-muted-foreground" />
                           <p className="text-sm text-muted-foreground">
-                            {task.repository}
+                            {task.mode === "process" ? "Processing" : "Query"}
                           </p>
                         </div>
                       )}
@@ -111,7 +111,7 @@ export default function TaskList() {
                       {task.title}
                     </h3>
                     <p className="text-sm text-muted-foreground">
-                      Status: {task.status} • Branch: {task.branch}
+                      Status: {task.status} • Mode: {task.mode === "process" ? "Processing" : "Query"}
                     </p>
                   </div>
                   <Button

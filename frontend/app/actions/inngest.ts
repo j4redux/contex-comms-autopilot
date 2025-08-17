@@ -1,10 +1,8 @@
 "use server";
-import { cookies } from "next/headers";
 import { getSubscriptionToken, Realtime } from "@inngest/realtime";
 
-import { inngest } from "@/lib/inngest";
+import { inngest, taskChannel } from "@/lib/inngest";
 import { Task } from "@/stores/tasks";
-import { getInngestApp, taskChannel } from "@/lib/inngest";
 
 export type TaskChannelToken = Realtime.Token<
   typeof taskChannel,
@@ -13,7 +11,6 @@ export type TaskChannelToken = Realtime.Token<
 
 export const createTaskAction = async ({
   task,
-  sessionId,
   prompt,
 }: {
   task: Task;
@@ -27,29 +24,19 @@ export const createTaskAction = async ({
     throw new Error("No user ID configured. Set NEXT_PUBLIC_DEV_USER_ID in environment.");
   }
 
-  // Send Omni-compatible event with correct data structure
+  // Send Inngest event to trigger backend task creation flow
   await inngest.send({
-    name: "omni/create.task", // Changed from "clonedx/create.task"
+    name: "omni/create.task",
     data: {
       task,
-      userId, // Use environment user ID instead of GitHub token
-      prompt: prompt || task.title, // Use prompt or fallback to task title
+      userId,
+      prompt: prompt || task.title,
     },
   });
 };
 
-// Pull request functionality not needed for Project Omni
-// Omni focuses on investor materials, not code PRs  
-export const createPullRequestAction = async ({
-  sessionId,
-}: {
-  sessionId?: string;
-}) => {
-  throw new Error("Pull request creation not implemented for Project Omni. Focus is on investor materials.");
-};
-
 export async function fetchRealtimeSubscriptionToken(): Promise<TaskChannelToken> {
-  const token = await getSubscriptionToken(getInngestApp(), {
+  const token = await getSubscriptionToken(inngest, {
     channel: taskChannel(),
     topics: ["status", "update"],
   });

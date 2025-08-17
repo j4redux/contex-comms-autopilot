@@ -49,7 +49,7 @@ export default function TaskNavbar({ id }: Props) {
             </p>
             <Dot className="size-4 text-muted-foreground" />
             <p className="text-sm text-muted-foreground">
-              {task?.mode === "code" ? "Knowledge Processing" : "Knowledge Query"}
+              {task?.mode === "process" ? "Knowledge Processing" : "Knowledge Query"}
             </p>
           </div>
         </div>
