@@ -22,39 +22,41 @@ RUN groupadd -r daytona && useradd -r -g daytona -m daytona
 RUN mkdir -p /root/.claude /home/daytona/.claude && \
     cat > /root/.claude/settings.json << 'EOF'
 {
-  "allowedTools": [
-    "Edit(**)",
-    "Write(**)",
-    "Read(**)",
-    "LS(**)",
-    "Glob(**)",
-    "Grep(**)",
-    "TodoWrite(**)",
-    "MultiEdit(**)",
-    "WebFetch(**)",
-    "WebSearch(**)",
-    "Bash(echo:*)",
-    "Bash(cat:*)",
-    "Bash(ls:*)",
-    "Bash(find:*)",
-    "Bash(jq:*)",
-    "Bash(grep:*)",
-    "Bash(rg:*)",
-    "Bash(wc:*)",
-    "Bash(head:*)",
-    "Bash(tail:*)"
-  ],
-  "deniedTools": [
-    "NotebookEdit(*)",
-    "NotebookRead(*)",
-    "Bash(rm:*)",
-    "Bash(sudo:*)",
-    "Bash(curl:*)",
-    "Bash(wget:*)",
-    "Bash(apt:*)",
-    "Bash(pip:*)",
-    "Bash(npm:*)"
-  ]
+  "permissions": {
+    "allow": [
+      "Edit(**)",
+      "Write(**)",
+      "Read(**)",
+      "LS(**)",
+      "Glob(**)",
+      "Grep(**)",
+      "TodoWrite(**)",
+      "MultiEdit(**)",
+      "WebFetch(**)",
+      "WebSearch(**)",
+      "Bash(echo:*)",
+      "Bash(cat:*)",
+      "Bash(ls:*)",
+      "Bash(find:*)",
+      "Bash(jq:*)",
+      "Bash(grep:*)",
+      "Bash(rg:*)",
+      "Bash(wc:*)",
+      "Bash(head:*)",
+      "Bash(tail:*)"
+    ],
+    "deny": [
+      "NotebookEdit(*)",
+      "NotebookRead(*)",
+      "Bash(rm:*)",
+      "Bash(sudo:*)",
+      "Bash(curl:*)",
+      "Bash(wget:*)",
+      "Bash(apt:*)",
+      "Bash(pip:*)",
+      "Bash(npm:*)"
+    ]
+  }
 }
 EOF
 RUN cp /root/.claude/settings.json /home/daytona/.claude/settings.json && chown -R daytona:daytona /home/daytona/.claude

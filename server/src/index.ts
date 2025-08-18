@@ -4,7 +4,7 @@
 import { Effect } from "effect"
 import { loadConfig } from "./services/config"
 import { createSandbox, getSandboxStatus } from "./services/sandbox"
-import { executeCommand, executeCommandAsync, getCommandStatus } from "./services/daytona"
+import { executeCommand, executeCommandAsync, getCommandStatus, ensureSandboxRunning } from "./services/daytona"
 import { inngest } from "./services/inngest"
 import { inngestHandler } from "./api/inngest"
 import crypto from "node:crypto"
@@ -124,10 +124,40 @@ const server = Bun.serve({
         const body = validateProcessBody(raw)
         if (!body) return apiError("VALIDATION_ERROR", "Invalid request body", { expected: "{ input, sandboxId, userId, taskId }" }, 400)
         
-        // Check sandbox status
+        // Check sandbox status and handle auto-restart
         const sb = yield* Effect.promise(() => getSandboxStatus(body.sandboxId))
         if (!sb) return apiError("SANDBOX_NOT_FOUND", "Sandbox not found", { sandboxId: body.sandboxId }, 404)
-        if (sb.status !== "ready") return apiError("SANDBOX_NOT_READY", "Sandbox not ready", { status: sb.status }, 409)
+
+        // Handle different sandbox states
+        if (sb.status === "stopped") {
+          try {
+            console.log(`🔄 Auto-restarting stopped sandbox for processing: ${body.sandboxId}`)
+            yield* Effect.promise(() => ensureSandboxRunning(body.sandboxId))
+            console.log(`✅ Sandbox restarted successfully: ${body.sandboxId}`)
+            // Continue with processing using restarted sandbox
+          } catch (restartError) {
+            console.error(`❌ Failed to restart sandbox ${body.sandboxId}:`, restartError)
+            return apiError("SANDBOX_RESTART_FAILED", "Failed to restart stopped sandbox", { 
+              sandboxId: body.sandboxId,
+              error: String(restartError) 
+            }, 500)
+          }
+        } else if (sb.status === "creating") {
+          return apiError("SANDBOX_NOT_READY", "Sandbox still being created", { 
+            status: sb.status,
+            sandboxId: body.sandboxId 
+          }, 409)
+        } else if (sb.status === "error") {
+          return apiError("SANDBOX_ERROR", "Sandbox in error state", { 
+            status: sb.status,
+            sandboxId: body.sandboxId 
+          }, 500)
+        } else if (sb.status !== "ready") {
+          return apiError("SANDBOX_NOT_READY", "Sandbox not ready", { 
+            status: sb.status,
+            sandboxId: body.sandboxId 
+          }, 409)
+        }
         
         const jobId = `job_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`
         

@@ -26,10 +26,10 @@
 */
 
 const BASE = Bun.env.BASE_URL || "http://localhost:8787";
-const USER_ID = Bun.env.USER_ID || "u1";
-const INPUT = Bun.env.INPUT || "What is 3 plus 7?";
+const USER_ID = Bun.env.USER_ID || `test-user-${Date.now()}`;
+const INPUT = Bun.env.INPUT || "Create an investor update memo in deliverables/memos/ about our Q3 performance showing 50% MRR growth from $10k to $15k. Also create a follow-up email in deliverables/emails/ to send to investors about this growth.";
 const MODEL = Bun.env.MODEL || "sonnet";
-const TASK_ID = Bun.env.TASK_ID || `test-task-${Date.now()}`;
+const TASK_ID = Bun.env.TASK_ID || `test-file-detection-${Date.now()}`;
 const TIMEOUT_MS = Number(Bun.env.TIMEOUT_MS || 180_000);
 
 function sleep(ms: number) {
@@ -137,15 +137,60 @@ async function main() {
   console.log(`📋 Job ID: ${(start as any).jobId}`);
   console.log(`🏷️  Task ID: ${TASK_ID}`);
   
-  console.log("\n🎯 Next Steps for Validation:");
+  // 4) Wait for file creation to complete, then verify files exist
+  console.log("\nStep 4: Waiting for file creation to complete...");
+  await sleep(30000); // Wait 30 seconds for Claude to finish creating files
+  
+  console.log("Step 5: Verifying files were actually created...");
+  const verifyTaskId = `verify-${TASK_ID}`;
+  const verifyBody = {
+    userId: USER_ID,
+    sandboxId,
+    taskId: verifyTaskId,
+    input: "List all files in the deliverables/ directory tree. Show me the contents of one of the memo files and one of the email files you just created to confirm they exist and contain the expected content.",
+    model: MODEL,
+  };
+  
+  const verifyStart = await startProcess(verifyBody);
+  console.log("verification process response:", verifyStart);
+  
+  if ((verifyStart as any).error) {
+    throw new Error(`Verification process failed: ${(verifyStart as any).error}`);
+  }
+
+  if (!(verifyStart as any).accepted) {
+    throw new Error("Verification process was not accepted by server");
+  }
+
+  console.log("✅ Verification process accepted!");
+  console.log(`📋 Verification Job ID: ${(verifyStart as any).jobId}`);
+  console.log(`🏷️  Verification Task ID: ${verifyTaskId}`);
+  
+  // Wait for verification to complete
+  console.log("\nStep 6: Waiting for verification to complete...");
+  await sleep(20000); // Wait 20 seconds for verification
+  
+  console.log("\n🎯 File Detection Test Validation:");
   console.log("1. Check Inngest Dev Server dashboard: http://localhost:8288");
   console.log(`2. Look for function execution with event 'omni/process.knowledge'`);
   console.log(`3. Verify taskId correlation: ${TASK_ID}`);
-  console.log("4. Monitor real-time streaming through frontend or Inngest channels");
+  console.log(`4. Verify verification taskId: ${verifyTaskId}`);
+  console.log("5. Monitor for NEW MESSAGE TYPES in real-time updates:");
+  console.log("   - 📝 'result': Claude's text response");
+  console.log("   - 📄 'file_created': New deliverable file metadata");
+  console.log("   - 📄 'file_updated': Modified deliverable file metadata");
+  console.log("   - 📋 'file_content': File contents for frontend display");
+  console.log("   - ✅ 'done': Task completion");
+  console.log("\n🔍 Expected File Creation:");
+  console.log("   - deliverables/memos/[memo-file].md (investor update)");
+  console.log("   - deliverables/emails/[email-file].md (follow-up email)");
   
-  console.log("\n✅ E2E Inngest test completed successfully!");
-  console.log("   Server accepted the job and triggered Inngest function.");
-  console.log("   Use Inngest dashboard to monitor execution and real-time streaming.");
+  console.log("\n✅ E2E Test with verification completed!");
+  console.log("   SUCCESS CRITERIA:");
+  console.log("   1. Files created by first prompt");
+  console.log("   2. Files verified to exist by second prompt");
+  console.log("   3. File content matches expected investor update format");
+  console.log("   4. File detection system publishes file_created messages");
 }
 
 main().catch((e) => {

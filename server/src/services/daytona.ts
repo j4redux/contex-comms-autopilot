@@ -30,6 +30,48 @@ function createClient(): Daytona {
   })
 }
 
+// Map Daytona workspace states to our internal states
+function mapDaytonaState(daytonaState?: string): "creating" | "ready" | "stopped" | "error" {
+  if (!daytonaState) return "error"
+  
+  switch (daytonaState) {
+    case "started": 
+      return "ready"
+    case "stopped":
+    case "archived":
+      return "stopped"
+    case "creating":
+    case "starting":
+    case "restoring":
+    case "pending_build":
+    case "building_snapshot":
+    case "pulling_snapshot":
+      return "creating"
+    case "error":
+    case "build_failed":
+    case "destroyed":
+    case "destroying":
+    case "unknown":
+    default:
+      return "error"
+  }
+}
+
+// Concurrent restart prevention
+const restartingSandboxes = new Set<string>()
+
+// Basic restart metrics
+const restartMetrics = {
+  attempts: 0,
+  successes: 0,
+  failures: 0,
+  timeouts: 0
+}
+
+// Status cache to reduce API calls  
+const statusCache = new Map<string, { status: DaytonaSandbox, timestamp: number }>()
+const CACHE_TTL = 30000 // 30 seconds
+
 
 // Clean sandbox creation using new snapshot created from current Dockerfile
 export async function createSandbox(userId: string): Promise<DaytonaSandbox> {
@@ -51,7 +93,7 @@ export async function createSandbox(userId: string): Promise<DaytonaSandbox> {
   
   // Use new snapshot with Claude Code 1.0.80 pre-installed
   const workspace = await daytona.create({
-    snapshot: "omni-snapshot-2025-08-18T15-57-31-493Z",
+    snapshot: "omni-snapshot-2025-08-18T18-16-29-074Z",
     envVars
   })
   
@@ -79,21 +121,123 @@ export async function getSandboxStatus(id: string): Promise<DaytonaSandbox | und
     throw new Error("Daytona not configured")
   }
   
+  // Check cache first
+  const cached = statusCache.get(id)
+  if (cached && Date.now() - cached.timestamp < CACHE_TTL) {
+    return cached.status
+  }
+  
   const daytona = createClient()
   try {
     const workspace = await daytona.get(id)
-    return {
+    const status = {
       id: workspace.id,
       userId: "unknown", // We don't track userId in status lookup
-      status: "ready",
-      createdAt: Date.now()
+      status: mapDaytonaState(workspace.state), // ✅ CHECK ACTUAL STATE
+      createdAt: workspace.createdAt ? new Date(workspace.createdAt).getTime() : Date.now()
     }
+    
+    // Cache the result
+    statusCache.set(id, { status, timestamp: Date.now() })
+    
+    return status
   } catch (error) {
-    if (String(error).includes("404")) {
+    // Handle 404 as undefined (sandbox doesn't exist)
+    if (String(error).includes("404") || String(error).includes("not found")) {
       return undefined
     }
+    console.error(`Error getting sandbox status for ${id}:`, error)
     throw error
   }
+}
+
+// Auto-restart logic to ensure sandbox is running
+export async function ensureSandboxRunning(sandboxId: string): Promise<DaytonaSandbox> {
+  const status = await getSandboxStatus(sandboxId)
+  
+  if (!status) {
+    throw new Error(`Sandbox not found: ${sandboxId}`)
+  }
+  
+  if (status.status === "error") {
+    throw new Error(`Sandbox in error state: ${sandboxId}`)
+  }
+  
+  if (status.status === "creating") {
+    // Wait for sandbox to finish creating
+    console.log(`⏳ Sandbox still creating: ${sandboxId}`)
+    return status
+  }
+  
+  if (status.status === "ready") {
+    // Already running
+    return status
+  }
+  
+  if (status.status === "stopped") {
+    // Check if another restart is already in progress
+    if (restartingSandboxes.has(sandboxId)) {
+      console.log(`⏳ Waiting for ongoing restart: ${sandboxId}`)
+      // Wait for ongoing restart to complete
+      while (restartingSandboxes.has(sandboxId)) {
+        await new Promise(resolve => setTimeout(resolve, 1000))
+      }
+      // Get fresh status after restart completes
+      return await getSandboxStatus(sandboxId) as DaytonaSandbox
+    }
+    
+    console.log(`🔄 Auto-restarting stopped sandbox: ${sandboxId}`)
+    restartingSandboxes.add(sandboxId)
+    restartMetrics.attempts++
+    
+    try {
+      const daytona = createClient()
+      const workspace = await daytona.get(sandboxId)
+      
+      // Restart the workspace with timeout
+      await daytona.start(workspace, 60) // 60 second timeout
+      console.log(`✅ Sandbox restarted successfully: ${sandboxId}`)
+      
+      // Recreate session after restart (critical!)
+      try {
+        await workspace.process.createSession(workspace.id)
+        console.log(`✅ Session recreated for sandbox: ${sandboxId}`)
+      } catch (sessionError) {
+        console.error(`❌ Failed to recreate session for ${sandboxId}:`, sessionError)
+        // Continue anyway - session might recover on first command
+        console.warn(`⚠️ Session recreation failed but sandbox is running: ${sandboxId}`)
+      }
+      
+      // Clear cache to force fresh status check
+      statusCache.delete(sandboxId)
+      restartMetrics.successes++
+      
+      return {
+        ...status,
+        status: "ready"
+      }
+    } catch (restartError) {
+      console.error(`❌ Failed to restart sandbox ${sandboxId}:`, restartError)
+      
+      // Track failure type
+      if (String(restartError).includes("timeout")) {
+        restartMetrics.timeouts++
+        throw new Error(`Sandbox restart timed out: ${sandboxId}`)
+      } else {
+        restartMetrics.failures++
+        throw new Error(`Sandbox restart failed: ${restartError}`)
+      }
+    } finally {
+      restartingSandboxes.delete(sandboxId)
+      
+      // Log metrics periodically
+      if (restartMetrics.attempts % 10 === 0 && restartMetrics.attempts > 0) {
+        console.log(`📊 Restart metrics: ${restartMetrics.successes}/${restartMetrics.attempts} successful, ${restartMetrics.failures} failures, ${restartMetrics.timeouts} timeouts`)
+      }
+    }
+  }
+  
+  return status
 }
 
 // Clean command execution following VibeKit pattern exactly  

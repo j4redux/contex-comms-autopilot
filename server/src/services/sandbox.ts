@@ -1,7 +1,7 @@
 // server/src/services/sandbox.ts
 // Daytona sandbox manager. Uses Daytona when configured; falls back to in-memory stub.
 
-import { isConfigured, createSandbox as createDaytonaSandbox, getSandboxStatus as getDaytonaSandboxStatus } from "./daytona"
+import { isConfigured, createSandbox as createDaytonaSandbox, getSandboxStatus as getDaytonaSandboxStatus, ensureSandboxRunning } from "./daytona"
 
 export interface Sandbox {
   id: string
@@ -29,21 +29,54 @@ function requireDaytonaInNonDev() {
 
 export async function createSandbox(userId: string): Promise<Sandbox> {
   if (isConfigured()) {
-    // Try to reuse preferred sandbox for this user if it exists and is not error
+    // Try to reuse preferred sandbox for this user
     const existingId = userPreferred.get(userId)
     if (existingId) {
       try {
         const st = await getDaytonaSandboxStatus(existingId)
-        if (st && st.status !== "error") {
-          return { id: st.id, userId, status: st.status, createdAt: st.createdAt }
+        if (st) {
+          if (st.status === "stopped") {
+            // Auto-restart stopped sandbox
+            console.log(`🔄 Attempting to restart existing sandbox for user ${userId}: ${existingId}`)
+            try {
+              const restarted = await ensureSandboxRunning(existingId)
+              console.log(`✅ Successfully restarted sandbox for user ${userId}: ${existingId}`)
+              return { 
+                id: restarted.id, 
+                userId, 
+                status: restarted.status, 
+                createdAt: restarted.createdAt 
+              }
+            } catch (restartError) {
+              console.warn(`⚠️ Failed to restart sandbox ${existingId} for user ${userId}, creating new one:`, restartError)
+              // Clear the failed preference and fall through to create new
+              userPreferred.delete(userId)
+            }
+          } else if (st.status === "ready") {
+            // Already running, reuse it
+            return { id: st.id, userId, status: st.status, createdAt: st.createdAt }
+          } else if (st.status === "creating") {
+            // Still creating, return it
+            return { id: st.id, userId, status: st.status, createdAt: st.createdAt }
+          }
+          // If error state, fall through to create new
         }
-      } catch {}
+      } catch (error) {
+        console.warn(`⚠️ Error checking existing sandbox for user ${userId}:`, error)
+        // Clear bad preference and fall through to create new
+        userPreferred.delete(userId)
+      }
     }
+    
+    // Create new sandbox
+    console.log(`📦 Creating new sandbox for user: ${userId}`)
     const remote = await createDaytonaSandbox(userId)
-    // remember for reuse
+    // Remember for reuse
     userPreferred.set(userId, remote.id)
     return { id: remote.id, userId, status: remote.status, createdAt: remote.createdAt }
   }
+  
+  // Fallback stub logic (unchanged)
   requireDaytonaInNonDev()
   const id = `sand_${Math.random().toString(36).slice(2)}`
   const sb: Sandbox = { id, userId, status: "creating", createdAt: Date.now() }

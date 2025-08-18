@@ -37,7 +37,7 @@ Errors
 
 Notes
 - Uses pre-built snapshot created from current Dockerfile with timestamp-based naming.
-- Current snapshot: `omni-snapshot-2025-08-18T15-57-31-493Z` with Claude Code 1.0.80 pre-installed.
+- Current snapshot: `omni-snapshot-2025-08-18T18-16-29-074Z` with Claude Code 1.0.80 pre-installed.
 
 ---
 
