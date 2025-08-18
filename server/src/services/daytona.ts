@@ -93,7 +93,7 @@ export async function createSandbox(userId: string): Promise<DaytonaSandbox> {
   
   // Use new snapshot with Claude Code 1.0.80 pre-installed
   const workspace = await daytona.create({
-    snapshot: "omni-snapshot-2025-08-18T18-16-29-074Z",
+    snapshot: "omni-snapshot-2025-08-18T21-57-49-580Z",
     envVars
   })
   
