@@ -4,7 +4,6 @@ import {
   Archive,
   ArrowLeft,
   Dot,
-  Brain,
 } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { useCallback } from "react";
@@ -75,14 +74,15 @@ export default function TaskNavbar({ id }: Props) {
           </Button>
         )}
         {/* Replaced pull request button with knowledge status */}
+        {/* 
         <Button
           className="rounded-full"
           variant="secondary"
           disabled
         >
-          <Brain />
           {task?.status === "IN_PROGRESS" ? "Processing..." : "Completed"}
         </Button>
+        */}
       </div>
     </div>
   );
