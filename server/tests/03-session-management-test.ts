@@ -27,7 +27,7 @@ async function testSessionManagement() {
     // Step 1: Create workspace
     console.log("\n1️⃣ Creating workspace...")
     workspace = await daytona.create({
-      snapshot: "omni-snapshot-2025-08-14T09-03-23-851Z",
+      snapshot: "omni-snapshot-2025-08-18T15-57-31-493Z",
       envVars: { 
         USER_ID: "test-session",
         ANTHROPIC_API_KEY: process.env.ANTHROPIC_API_KEY || ""

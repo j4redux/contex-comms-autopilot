@@ -34,7 +34,7 @@ This guide documents the complete implementation of Claude Code CLI execution wi
 
 ### Creating Snapshots
 
-Use the current snapshot: `omni-snapshot-2025-08-14T09-03-23-851Z`
+Use the current snapshot: `omni-snapshot-2025-08-18T15-57-31-493Z`
 
 This snapshot includes:
 - Ubuntu 22.04 base
@@ -193,7 +193,7 @@ export async function createSandbox(userId: string): Promise<DaytonaSandbox> {
   const daytona = createClient()
   
   const workspace = await daytona.create({
-    snapshot: "omni-snapshot-2025-08-14T09-03-23-851Z", // Use current snapshot
+    snapshot: "omni-snapshot-2025-08-18T15-57-31-493Z", // Use current snapshot
     envVars: {
       USER_ID: userId,
       ANTHROPIC_API_KEY: process.env.ANTHROPIC_API_KEY || ""
@@ -418,7 +418,7 @@ ANTHROPIC_API_KEY=sk-ant-...    # Claude API access
 **Snapshot Cache:**
 ```json
 {
-  "name": "omni-snapshot-2025-08-14T09-03-23-851Z",
+  "name": "omni-snapshot-2025-08-18T15-57-31-493Z",
   "id": "ae794536-7f2b-4e9d-851e-05174e7a273c",
   "dockerHash": "new",
   "ts": 1755162579704,
@@ -431,7 +431,7 @@ ANTHROPIC_API_KEY=sk-ant-...    # Claude API access
 ```typescript
 // CORRECT: Snapshot-based creation
 const workspace = await daytona.create({
-  snapshot: "omni-snapshot-2025-08-14T09-03-23-851Z",  // Use current snapshot
+  snapshot: "omni-snapshot-2025-08-18T15-57-31-493Z",  // Use current snapshot
   envVars: {
     USER_ID: userId,
     ANTHROPIC_API_KEY: process.env.ANTHROPIC_API_KEY
@@ -490,7 +490,7 @@ echo "prompt" | claude -p --output-format text
 
 **1. "Claude CLI not found"**
 - **Cause**: Using base image instead of snapshot
-- **Fix**: Use `snapshot: "omni-snapshot-2025-08-14T09-03-23-851Z"`
+- **Fix**: Use `snapshot: "omni-snapshot-2025-08-18T15-57-31-493Z"`
 
 **2. "401 Unauthorized" / Authentication failures**
 - **Cause**: ANTHROPIC_API_KEY not properly passed

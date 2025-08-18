@@ -61,7 +61,7 @@ bun run scripts/e2e-inngest-process.ts
 ## 6) Daytona Integration
 - Snapshot from repo-root `Dockerfile`; timestamp-based naming; cached in `server/.snapshot-cache.json`
 - Session-based exec with log streaming using VibeKit patterns (pipe-based input)
-- Current snapshot: `omni-snapshot-2025-08-14T09-03-23-851Z` with Claude Code 1.0.80
+- Current snapshot: `omni-snapshot-2025-08-18T15-57-31-493Z` with Claude Code 1.0.80
 
 ## 7) Troubleshooting
 - **EADDRINUSE**: stop prior runs; free port 8787
