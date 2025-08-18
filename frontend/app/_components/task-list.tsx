@@ -45,13 +45,13 @@ export default function TaskList() {
                   key={task.id}
                   className="border rounded-lg bg-background p-4 flex items-center justify-between hover:bg-sidebar"
                 >
-                  <Link href={`/task/${task.id}`} className="flex-1">
-                    <div>
-                      <div className="flex items-center gap-x-2">
+                  <Link href={`/task/${task.id}`} className="flex-1 min-w-0">
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-x-2 min-w-0">
                         {task.hasChanges && (
-                          <div className="size-2 rounded-full bg-blue-500 " />
+                          <div className="size-2 rounded-full bg-blue-500 flex-shrink-0" />
                         )}
-                        <h3 className="font-medium">{task.title}</h3>
+                        <h3 className="font-medium overflow-hidden text-ellipsis whitespace-nowrap max-w-md">{task.title}</h3>
                       </div>
                       {task.status === "IN_PROGRESS" ? (
                         <div>
@@ -106,8 +106,8 @@ export default function TaskList() {
                   key={task.id}
                   className="border rounded-lg p-4 flex items-center justify-between bg-background"
                 >
-                  <div>
-                    <h3 className="font-medium text-muted-foreground">
+                  <div className="flex-1 min-w-0">
+                    <h3 className="font-medium text-muted-foreground overflow-hidden text-ellipsis whitespace-nowrap max-w-md">
                       {task.title}
                     </h3>
                     <p className="text-sm text-muted-foreground">
