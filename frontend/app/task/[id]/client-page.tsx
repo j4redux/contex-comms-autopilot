@@ -45,6 +45,7 @@ export default function TaskClientPage({ id }: Props) {
   const scrollAreaRef = useRef<HTMLDivElement>(null);
   const chatScrollAreaRef = useRef<HTMLDivElement>(null);
   const hasMarkedViewedRef = useRef<string | null>(null);
+  const processedMessagesRef = useRef<Set<string>>(new Set());
 
   // Function to get the output message for a given shell call message
   const getOutputForCall = (callId: string) => {
@@ -65,10 +66,19 @@ export default function TaskClientPage({ id }: Props) {
       const { taskId, message } = latestData.data;
 
       if (taskId === id && message && isValidIncomingMessage(message)) {
-        console.log("Received message:", message);
+        // Create unique message ID to prevent duplicate processing
+        const messageId = `${message.type}-${message.jobId || ''}-${message.ts || Date.now()}`;
+        
+        if (processedMessagesRef.current.has(messageId)) {
+          return; // Skip already processed message
+        }
+        
+        processedMessagesRef.current.add(messageId);
+        console.log("Processing new message:", message.type, message);
         
         // Handle different message types from backend
         if (message.type === "result") {
+          console.log("✅ RESULT MESSAGE:", message.data);
           // Claude response - add as assistant message
           updateTask(id, {
             messages: [...(task?.messages || []), {
@@ -81,12 +91,17 @@ export default function TaskClientPage({ id }: Props) {
             }],
           });
         } else if (message.type === "done") {
+          console.log("✅ DONE MESSAGE");
           // Task completed - update status
           updateTask(id, {
             status: "DONE",
           });
+        } else if (message.type === "log") {
+          // Don't spam UI with log messages, just console log
+          console.log("📝 LOG:", message.data);
         } else {
-          // Log, error, or other message types - add to messages for debugging
+          console.log("❓ OTHER MESSAGE:", message.type, message);
+          // Error or other important message types
           updateTask(id, {
             messages: [...(task?.messages || []), {
               role: "assistant",
