@@ -34,12 +34,12 @@ This guide documents the complete implementation of Claude Code CLI execution wi
 
 ### Creating Snapshots
 
-Use the current snapshot: `omni-snapshot-2025-08-18T18-16-29-074Z`
+Use the current snapshot: `omni-snapshot-2025-08-18T21-57-49-580Z`
 
 This snapshot includes:
 - Ubuntu 22.04 base
-- Claude Code CLI 1.0.80 (via curl install script)
-- Proper user setup (`daytona` user)
+- Claude Code CLI 1.0.83 (via curl install script)
+- Proper user setup (`omni` user)
 - Complete knowledge workspace structure
 - Pre-configured Claude settings
 
@@ -193,7 +193,7 @@ export async function createSandbox(userId: string): Promise<DaytonaSandbox> {
   const daytona = createClient()
   
   const workspace = await daytona.create({
-    snapshot: "omni-snapshot-2025-08-18T18-16-29-074Z", // Use current snapshot
+    snapshot: "omni-snapshot-2025-08-18T21-57-49-580Z", // Use current snapshot
     envVars: {
       USER_ID: userId,
       ANTHROPIC_API_KEY: process.env.ANTHROPIC_API_KEY || ""
@@ -418,7 +418,7 @@ ANTHROPIC_API_KEY=sk-ant-...    # Claude API access
 **Snapshot Cache:**
 ```json
 {
-  "name": "omni-snapshot-2025-08-18T18-16-29-074Z",
+  "name": "omni-snapshot-2025-08-18T21-57-49-580Z",
   "id": "ae794536-7f2b-4e9d-851e-05174e7a273c",
   "dockerHash": "new",
   "ts": 1755162579704,
@@ -431,7 +431,7 @@ ANTHROPIC_API_KEY=sk-ant-...    # Claude API access
 ```typescript
 // CORRECT: Snapshot-based creation
 const workspace = await daytona.create({
-  snapshot: "omni-snapshot-2025-08-18T18-16-29-074Z",  // Use current snapshot
+  snapshot: "omni-snapshot-2025-08-18T21-57-49-580Z",  // Use current snapshot
   envVars: {
     USER_ID: userId,
     ANTHROPIC_API_KEY: process.env.ANTHROPIC_API_KEY
@@ -490,7 +490,7 @@ echo "prompt" | claude -p --output-format text
 
 **1. "Claude CLI not found"**
 - **Cause**: Using base image instead of snapshot
-- **Fix**: Use `snapshot: "omni-snapshot-2025-08-18T18-16-29-074Z"`
+- **Fix**: Use `snapshot: "omni-snapshot-2025-08-18T21-57-49-580Z"`
 
 **2. "401 Unauthorized" / Authentication failures**
 - **Cause**: ANTHROPIC_API_KEY not properly passed
@@ -504,7 +504,23 @@ echo "prompt" | claude -p --output-format text
 - **Cause**: Too many active sandboxes
 - **Fix**: Clean up old sandboxes, implement proper lifecycle management
 
-**5. Session management errors**
+**5. Empty files created in Dockerfile**
+- **Cause**: Heredoc (`<< 'EOF'`) syntax issues when running as non-root user
+- **Fix**: Use echo commands instead of heredocs for file creation
+- **Example**:
+  ```dockerfile
+  # ❌ BROKEN: Heredoc approach
+  RUN cat > file.json << 'EOF'
+  {"key": "value"}
+  EOF
+  
+  # ✅ WORKING: Echo approach  
+  RUN echo "{" > file.json && \
+      echo "  \"key\": \"value\"" >> file.json && \
+      echo "}" >> file.json
+  ```
+
+**6. Session management errors**
 - **Cause**: Not creating session before command execution
 - **Fix**: Always call `workspace.process.createSession(workspace.id)` first
 
@@ -777,10 +793,11 @@ Track key metrics:
 
 1. **Use snapshots, never runtime installation**
 2. **Stick to VibeKit pipe pattern exclusively**
-3. **Verify environment setup before execution**
-4. **Implement comprehensive testing at component level**
-5. **Handle JSON parsing with fallbacks**
-6. **Maintain proper session lifecycle**
-7. **Clean up resources consistently**
+3. **Use echo commands for file creation in Dockerfiles**
+4. **Verify environment setup before execution**
+5. **Implement comprehensive testing at component level**
+6. **Handle JSON parsing with fallbacks**
+7. **Maintain proper session lifecycle**
+8. **Clean up resources consistently**
 
 This implementation provides a robust, tested foundation for Claude Code execution within Daytona sandboxes, suitable for production use with proper monitoring and scaling considerations.

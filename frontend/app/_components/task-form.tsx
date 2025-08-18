@@ -41,7 +41,7 @@ export default function TaskForm() {
   return (
     <div className="max-w-3xl mx-auto w-full flex flex-col gap-y-10 mt-14">
       <h1 className="text-4xl text-center font-bold">
-        What are you working on?
+        What do you need to tell your investors?
       </h1>
       <div className="p-0.5 rounded-lg bg-muted">
         <div className="flex flex-col gap-y-2 border bg-background rounded-lg p-4">

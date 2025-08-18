@@ -169,6 +169,52 @@
 
 **Notes**: Core Claude Code integration fully functional with corrected pure Inngest event-driven architecture. Proved complete pipeline: frontend Inngest events → backend function chaining → Claude processing → real-time result delivery.
 
+### ✅ Completed Step: BONUS - Real-Time File Detection System 
+
+**Started**: 2025-08-18  
+**Status**: ✅ COMPLETED - PRODUCTION READY  
+**Description**: Implement real-time detection and streaming of deliverable files created by Claude Code
+
+**Critical Issues Resolved**:
+- [x] **Claude Code Permissions**: Fixed JSON structure from `allowedTools` to `permissions.allow` in Dockerfile
+- [x] **SDK Path Mapping**: Corrected file detection paths from absolute to workspace-relative paths
+- [x] **Sandbox Caching**: Implemented unique userId generation to force fresh sandbox creation
+- [x] **File Creation Verification**: Added comprehensive E2E testing with creation + verification flow
+
+**Implementation Completed**:
+- [x] File detection logic using Daytona SDK (`captureExistingFiles`, `scanFileChanges`) 
+- [x] Real-time message publishing (`file_created`, `file_updated`, `file_content`)
+- [x] Directory structure monitoring (deliverables/emails, memos, presentations)
+- [x] File content streaming with 50KB limit for frontend display
+- [x] Error isolation and robust handling for file operations
+- [x] Enhanced E2E test script with verification step
+
+**Technical Details**:
+- **Target Directories**: `deliverables/{emails,memos,presentations}`, `updates`, `metrics/historical`
+- **File Types**: `*.md`, `*.txt`, `*.json`, `*.html`, `*.csv`
+- **Message Flow**: File creation → SDK detection → Inngest message → Frontend real-time display
+
+**Verification Criteria**:
+- ✅ Claude Code creates files successfully without permission prompts
+- ✅ Daytona SDK detects files at correct paths in real-time
+- ✅ `file_created` and `file_content` messages published to frontend
+- ✅ End-to-end verification: Files created and readable by Claude
+- ✅ Fresh sandbox testing with unique userId working
+- ✅ Complete pipeline tested: Task → File Creation → Detection → Messaging
+
+**Test Evidence (Latest Successful Run)**:
+```
+✅ Files Successfully Created & Detected:
+- deliverables/memos/q3-investor-update.md
+- deliverables/emails/q3-investor-followup.md
+
+Sandbox ID: 3fb00d78-1c07-4b7b-8ff4-29729601c785
+Task ID: test-file-detection-1755542647502  
+Verification Task ID: verify-test-file-detection-1755542647502
+```
+
+**Notes**: **PRODUCTION READY BACKEND** - Complete file detection pipeline operational. Frontend integration ready (just needs UI components for file display). This enables real-time display of investor memos, emails, and other deliverables as Claude creates them.
+
 ### ✅ Completed Step: Step 1D - Update environment variables and configuration
 
 **Started**: 2025-01-15  
