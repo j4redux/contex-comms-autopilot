@@ -73,9 +73,9 @@ export function FileContentRenderer({ file }: FileContentRendererProps) {
   };
 
   return (
-    <div className="flex flex-col h-full overflow-hidden">
+    <div className="h-full grid grid-rows-[auto_1fr]">
       {/* Simplified metadata header */}
-      <div className="border-b pb-3 mb-4 flex-shrink-0">
+      <div className="border-b pb-3 mb-4">
         <div className="flex items-center justify-between">
           <div className="text-sm text-muted-foreground">
             Modified: {new Date(file.metadata.modifiedAt).toLocaleString()}
@@ -89,7 +89,7 @@ export function FileContentRenderer({ file }: FileContentRendererProps) {
       </div>
 
       {/* File content - scrollable area */}
-      <div className="flex-1 min-h-0 overflow-y-auto pr-4 pb-4">
+      <div className="overflow-y-auto pr-4 pb-4">
         {renderContent()}
       </div>
     </div>

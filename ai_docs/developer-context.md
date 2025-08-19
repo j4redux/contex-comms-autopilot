@@ -6,7 +6,7 @@
 
 **Current Status**: MVP Day 2+ COMPLETE - Pure Inngest event-driven architecture implemented and verified  
 **Timeline**: 3-day MVP sprint for design partner testing  
-**Last Updated**: August 16, 2025
+**Last Updated**: August 19, 2025 - Scrolling bug fixed in task detail page
 
 ---
 
@@ -625,7 +625,39 @@ PORT=8787
    - **Impact**: Generic developer interface instead of founder-specific experience
    - **Next**: Customize task forms and messaging for founder brain dumps
 
+### Resolved Issues (Important Learnings)
+
+#### Task Detail Page Scrolling Bug (Fixed: August 19, 2025)
+
+**Problem**: Right panel file content area was not scrollable when content exceeded viewport height. Users could not scroll to see content below the "Modified:" divider line.
+
+**Root Cause**: Height constraints were not properly propagating through the nested component hierarchy. The combination of flex layouts, Tabs components, and nested containers broke the scrolling context.
+
+**Solution**: Used CSS Grid with explicit height constraints instead of relying on flex chain:
+- Changed Tabs component from `flex flex-col` to `grid grid-rows-[auto_1fr]`
+- Updated TabsContent wrapper to use `overflow-hidden` with `h-full`
+- Modified FileContentRenderer to use `grid grid-rows-[auto_1fr]` layout
+- Ensured scrollable content area has explicit overflow-y-auto
+
+**Key Files Modified**:
+- `frontend/app/task/[id]/client-page.tsx:288-310` - Main layout structure
+- `frontend/app/task/[id]/_components/file-content-renderer.tsx:76-94` - Content renderer
+
+**Lessons Learned**:
+1. **CSS Grid is more reliable for explicit height constraints** than flex when dealing with scrollable areas
+2. **The `h-0` trick** (`flex-1 h-0 overflow-y-auto`) can fix some flex scrolling issues but not all
+3. **Every container in the chain** must properly constrain height - one broken link breaks scrolling
+4. **Avoid `overflow-hidden` on parent containers** of scrollable areas - it breaks the scroll context
+5. **Tabs components can interfere** with height propagation - may need special handling
+
 ### Important Gotchas
+
+**Layout & Scrolling**:
+- When creating scrollable areas in nested layouts, prefer CSS Grid over Flexbox for explicit height control
+- Use `grid-template-rows: auto 1fr` pattern for header + scrollable content layouts
+- Always test scrolling with content that exceeds viewport height
+- Check that height constraints propagate through entire component hierarchy
+- Be careful with third-party components (like Radix UI Tabs) that may not preserve height constraints
 
 **Environment Variables**:
 - Frontend: Use `NEXT_PUBLIC_` prefix for client-side variables
@@ -711,6 +743,21 @@ PORT=8787
 - Custom hooks for reusable logic
 - Proper dependency arrays in useEffect
 - Server components where appropriate
+
+**UI Layout & Scrolling**:
+- Use CSS Grid (`grid grid-rows-[auto_1fr]`) for layouts with fixed header + scrollable content
+- Avoid deeply nested flex containers when implementing scrollable areas
+- Test all scrollable areas with content that exceeds viewport height
+- Document component hierarchy when implementing complex nested layouts
+- Use browser DevTools to inspect computed heights and overflow properties
+- When using third-party UI components (Tabs, Accordions, etc.), verify they preserve height constraints
+- Common pattern for scrollable content:
+  ```jsx
+  <div className="h-full grid grid-rows-[auto_1fr]">
+    <div className="header-content">Fixed Header</div>
+    <div className="overflow-y-auto">Scrollable Content</div>
+  </div>
+  ```
 
 **Backend**:
 - Effect-style async composition
@@ -820,5 +867,5 @@ lsof -ti:8787 | xargs kill  # Backend
 
 ---
 
-*Last Updated: August 19, 2025 - File Detection System Complete*  
+*Last Updated: August 19, 2025 - File Detection System Complete & Scrolling Bug Fixed*  
 *Next Update: After founder-specific UI customization*

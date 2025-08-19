@@ -285,8 +285,8 @@ export default function TaskClientPage({ id }: Props) {
                 </h3>
               </div>
               
-              <div className="flex-1 px-6 pb-6">
-                <Tabs value={activeFileTab} onValueChange={setActiveFileTab} className="h-full flex flex-col">
+              <div className="flex-1 px-6 pb-6 min-h-0">
+                <Tabs value={activeFileTab} onValueChange={setActiveFileTab} className="h-full grid grid-rows-[auto_1fr]">
                   <TabsList className="w-full mb-4">
                     {Object.keys(deliverableFiles).map(filePath => {
                       const file = deliverableFiles[filePath];
@@ -305,9 +305,9 @@ export default function TaskClientPage({ id }: Props) {
                     })}
                   </TabsList>
                   
-                  <div className="flex-1 min-h-0">
+                  <div className="min-h-0 overflow-hidden">
                     {Object.keys(deliverableFiles).map(filePath => (
-                      <TabsContent key={filePath} value={filePath} className="flex-1 min-h-0 flex flex-col">
+                      <TabsContent key={filePath} value={filePath} className="h-full overflow-hidden">
                         <FileContentRenderer 
                           file={deliverableFiles[filePath]}
                           filePath={filePath}
