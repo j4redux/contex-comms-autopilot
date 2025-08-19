@@ -187,7 +187,7 @@ export const createTask = inngest.createFunction(
   }
 )
 
-// Full Claude Code processing function (restored from original WebSocket implementation)
+// Full Claude Code processing function
 export const processKnowledge = inngest.createFunction(
   { id: "process-knowledge" },
   { event: "omni/process.knowledge" },
