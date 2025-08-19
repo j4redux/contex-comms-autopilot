@@ -8,23 +8,20 @@ import { formatDistanceToNow } from "date-fns";
 import { useCallback } from "react";
 
 import { Button } from "@/components/ui/button";
-import { useTaskStore } from "@/stores/tasks";
+import { useTaskStore, type Task } from "@/stores/tasks";
 
 interface Props {
-  id: string;
+  task: Task;
 }
 
-export default function TaskNavbar({ id }: Props) {
-  const { getTaskById, updateTask } = useTaskStore();
-  const task = getTaskById(id);
+export default function TaskNavbar({ task }: Props) {
+  const { updateTask } = useTaskStore();
 
   const handleArchiveTask = useCallback(() => {
-    if (!task) return;
-
-    updateTask(id, {
+    updateTask(task.id, {
       isArchived: !task.isArchived,
     });
-  }, [task, id, updateTask]);
+  }, [task, updateTask]);
 
   return (
     <div className="h-14 border-b flex items-center justify-between px-4">
@@ -36,20 +33,18 @@ export default function TaskNavbar({ id }: Props) {
         </Link>
         <div className="h-8 border-r" />
         <div className="flex flex-col gap-x-2 ml-4 flex-1 min-w-0">
-          <h3 className="font-medium overflow-hidden text-ellipsis whitespace-nowrap max-w-md">{task?.title}</h3>
+          <h3 className="font-medium overflow-hidden text-ellipsis whitespace-nowrap max-w-md">{task.title}</h3>
           <div className="flex items-center gap-x-0">
             <p className="text-sm text-muted-foreground">
-              {task?.createdAt
-                ? formatDistanceToNow(new Date(task.createdAt), {
-                    addSuffix: true,
-                  })
-                : "Loading..."}
+              {formatDistanceToNow(new Date(task.createdAt), {
+                addSuffix: true,
+              })}
             </p>
           </div>
         </div>
       </div>
       <div className="flex items-center gap-x-2">
-        {task?.isArchived ? (
+        {task.isArchived ? (
           <Button
             variant="outline"
             className="rounded-full"

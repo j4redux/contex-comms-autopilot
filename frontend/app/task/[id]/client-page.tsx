@@ -36,6 +36,7 @@ interface Props {
 }
 
 export default function TaskClientPage({ id }: Props) {
+  const [isHydrated, setIsHydrated] = useState(false);
   const { getTaskById, updateTask } = useTaskStore();
   const task = getTaskById(id);
   const scrollAreaRef = useRef<HTMLDivElement>(null);
@@ -45,6 +46,11 @@ export default function TaskClientPage({ id }: Props) {
 
   // Get global subscription status for debugging
   const { isConnected, error } = useInngestRealtime();
+
+  // Set hydration state on client side
+  useEffect(() => {
+    setIsHydrated(true);
+  }, []);
 
   // Function to get the output message for a given shell call message
   const getOutputForCall = (callId: string) => {
@@ -110,8 +116,6 @@ export default function TaskClientPage({ id }: Props) {
     );
   };
 
-  const deliverableFiles = getDeliverableFiles(task?.files);
-
   // Get appropriate icon based on file type
   const getFileIcon = (fileType: string, fileName: string, directory: string) => {
     // Check directory for context
@@ -136,8 +140,11 @@ export default function TaskClientPage({ id }: Props) {
 
   // Set default active tab when files are received
   useEffect(() => {
-    const currentDeliverableFiles = getDeliverableFiles(task?.files);
-    console.log("📂 Task files updated:", task?.files);
+    // Only run after hydration when task is available
+    if (!isHydrated || !task) return;
+    
+    const currentDeliverableFiles = getDeliverableFiles(task.files);
+    console.log("📂 Task files updated:", task.files);
     console.log("📂 Deliverable files:", currentDeliverableFiles);
     console.log("📂 Deliverable count:", Object.keys(currentDeliverableFiles).length);
     
@@ -146,11 +153,36 @@ export default function TaskClientPage({ id }: Props) {
       console.log("📂 Setting active file tab to:", firstFilePath);
       setActiveFileTab(firstFilePath);
     }
-  }, [task?.files, activeFileTab]);
+  }, [task, activeFileTab, isHydrated]);
+
+  // Show loading state until hydrated
+  if (!isHydrated) {
+    return (
+      <div className="flex flex-col h-screen">
+        <div className="h-14 border-b flex items-center px-4">
+          <p className="text-muted-foreground">Loading task...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Show error if task not found after hydration
+  if (!task) {
+    return (
+      <div className="flex flex-col h-screen">
+        <div className="h-14 border-b flex items-center px-4">
+          <p className="text-muted-foreground">Task not found</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Calculate deliverable files after we know task exists
+  const deliverableFiles = getDeliverableFiles(task.files);
 
   return (
     <div className="flex flex-col h-screen">
-      <TaskNavbar id={id} />
+      <TaskNavbar task={task} />
       <div className="flex flex-1 overflow-hidden">
         {/* Sidebar for chat messages */}
         <div className="w-full max-w-3xl mx-auto border-r border-border bg-gradient-to-b from-background to-muted/5 flex flex-col h-full">
@@ -260,7 +292,7 @@ export default function TaskClientPage({ id }: Props) {
 
           {/* Message input component - fixed at bottom */}
           <div className="flex-shrink-0">
-            <MessageInput task={task!} />
+            <MessageInput task={task} />
           </div>
         </div>
 
