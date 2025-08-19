@@ -9,7 +9,7 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { useTaskStore, type Task } from "@/stores/tasks";
 import { 
   Terminal, 
-  Bot, 
+  PenLine, 
   User, 
   Loader, 
   FileIcon,
@@ -198,7 +198,7 @@ export default function TaskClientPage({ id }: Props) {
                       {isAssistant && (
                         <div className="flex-shrink-0">
                           <div className="w-8 h-8 rounded-full bg-muted flex items-center justify-center border border-border">
-                            <Bot className="w-4 h-4 text-muted-foreground" />
+                            <PenLine className="w-4 h-4 text-muted-foreground" />
                           </div>
                         </div>
                       )}
@@ -239,7 +239,7 @@ export default function TaskClientPage({ id }: Props) {
                     <div className="flex gap-3">
                       <div className="flex-shrink-0">
                         <div className="w-8 h-8 rounded-full bg-muted flex items-center justify-center border border-border animate-pulse">
-                          <Bot className="w-4 h-4 text-muted-foreground" />
+                          <PenLine className="w-4 h-4 text-muted-foreground" />
                         </div>
                       </div>
                       <div className="bg-card border border-border rounded-2xl px-5 py-3 shadow-sm">
