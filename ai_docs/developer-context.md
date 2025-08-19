@@ -115,25 +115,28 @@ Event Flow: Frontend → "omni/create.task" → createTask → "omni/process.kno
 - ✅ Full Inngest function architecture for job durability and retry logic
 - ✅ Comprehensive error handling and logging for debugging
 
-**Real-Time File Detection System (COMPLETED)**:
+**Real-Time File Detection System (✅ FULLY COMPLETE - August 19, 2025)**:
 - ✅ **File Creation**: Claude Code Write tool creating files successfully in sandbox
-- ✅ **Real-time Detection**: Daytona SDK detecting new/updated files immediately
+- ✅ **Real-time Detection**: Shell-based detection using find/stat/head commands
 - ✅ **Message Publishing**: `file_created` and `file_content` messages sent to frontend
-- ✅ **Path Resolution**: Correct SDK path mapping between host and container filesystem
+- ✅ **Path Resolution**: Direct access to Claude's /home/omni working directory
 - ✅ **Permissions**: Fixed Claude Code permissions structure for non-interactive operation
-- ✅ **End-to-End Verification**: Complete E2E test with file creation + verification
-- ✅ **Production Ready Backend**: File detection pipeline fully operational
+- ✅ **Frontend Display**: Tabbed file view in right panel fully implemented
+- ✅ **Message Handling**: Global InngestRealtimeProvider handling all file messages
+- ✅ **End-to-End Verification**: Complete system tested and working in production
+
+**Critical Architecture Note**: All Inngest messages MUST be handled in the global `InngestRealtimeProvider`. Never create additional `useInngestSubscription` hooks - they will not receive messages due to subscription conflicts.
 
 **Still In Progress**:
-- [ ] Frontend file display UI (tabbed interface for deliverable files)
 - [ ] Modify task form for founder-specific input patterns
-- [ ] Update UI for investor materials display
+- [ ] Update UI messaging for investor materials context
 
 ### 📋 Planned (Day 3 - Polish & Testing)
 
 **Design Partner Ready**:
+- [x] File detection and display system
 - [ ] Error handling and edge cases
-- [ ] UI messaging for founder context
+- [ ] UI messaging for founder context  
 - [ ] Real founder scenario testing
 - [ ] Deploy to staging environment
 
@@ -817,5 +820,5 @@ lsof -ti:8787 | xargs kill  # Backend
 
 ---
 
-*Last Updated: August 16, 2025 - Pure Inngest Architecture Verified*  
-*Next Update: After Day 3 UI Polish & Testing*
+*Last Updated: August 19, 2025 - File Detection System Complete*  
+*Next Update: After founder-specific UI customization*

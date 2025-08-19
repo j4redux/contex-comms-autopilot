@@ -78,12 +78,16 @@ function isValidIncomingMessage(message: unknown): message is IncomingMessage {
   return (
     typeof message === "object" &&
     message !== null &&
-    "role" in message &&
     "type" in message &&
     "data" in message &&
-    (message.role === "user" || message.role === "assistant") &&
     typeof message.type === "string" &&
-    typeof message.data === "object"
+    typeof message.data === "object" &&
+    (
+      // Regular messages need role
+      ("role" in message && (message.role === "user" || message.role === "assistant")) ||
+      // File messages don't need role
+      (message.type === "file_created" || message.type === "file_content")
+    )
   );
 }
 
@@ -131,10 +135,14 @@ export function SubscriptionHandler({ taskId, streamingMessages, setStreamingMes
   useEffect(() => {
     if (!isMounted.current || !subscriptionEnabled) return;
     
+    console.log("🔍 SubscriptionHandler latestData:", latestData);
+    
     if (latestData?.channel === "tasks" && latestData.topic === "update") {
       const { taskId: messageTaskId, message } = latestData.data;
+      console.log("🔍 SubscriptionHandler message for task:", messageTaskId, "message:", message);
 
       if (messageTaskId === taskId && message && isValidIncomingMessage(message)) {
+        console.log("✅ SubscriptionHandler processing message type:", message.type);
         // Handle streaming messages
         if (isStreamingMessage(message)) {
           const streamId = message.data.streamId;
@@ -189,6 +197,62 @@ export function SubscriptionHandler({ taskId, streamingMessages, setStreamingMes
               return newMap;
             });
           }
+        } else if (message.type === "file_created") {
+          // Handle file creation message
+          console.log("📁 FILE_CREATED message received:", message);
+          const data = message.data as {
+            filePath: string;
+            fileName: string;
+            fileType: string;
+            directory: string;
+            size: number;
+            modifiedAt: number;
+          };
+          
+          const updatedFiles = {
+            ...task?.files,
+            [data.filePath]: {
+              metadata: data,
+              content: task?.files?.[data.filePath]?.content || "",
+              status: 'new' as const,
+              updatedAt: Date.now()
+            }
+          };
+          
+          console.log("📁 Updating task files:", updatedFiles);
+          updateTask(taskId, {
+            files: updatedFiles
+          });
+          
+        } else if (message.type === "file_content") {
+          // Handle file content message
+          console.log("📄 FILE_CONTENT message received:", message);
+          const data = message.data as {
+            filePath: string;
+            content: string;
+          };
+          
+          const existingFile = task?.files?.[data.filePath];
+          const updatedFiles = {
+            ...task?.files,
+            [data.filePath]: {
+              metadata: existingFile?.metadata || {
+                fileName: data.filePath.split('/').pop() || '',
+                fileType: 'text',
+                directory: data.filePath.split('/').slice(0, -1).join('/'),
+                size: 0,
+                modifiedAt: Date.now()
+              },
+              content: data.content,
+              status: existingFile?.status || 'new' as const,
+              updatedAt: Date.now()
+            }
+          };
+          
+          console.log("📄 Updating task with file content:", updatedFiles);
+          updateTask(taskId, {
+            files: updatedFiles
+          });
         } else {
           // Regular non-streaming message
           updateTask(taskId, {
@@ -197,7 +261,7 @@ export function SubscriptionHandler({ taskId, streamingMessages, setStreamingMes
         }
       }
     }
-  }, [latestData, taskId, task?.messages, streamingMessages, updateTask, setStreamingMessages, subscriptionEnabled]);
+  }, [latestData, taskId, task?.messages, task?.files, streamingMessages, updateTask, setStreamingMessages, subscriptionEnabled]);
 
   // Handle subscription errors
   useEffect(() => {
@@ -205,7 +269,7 @@ export function SubscriptionHandler({ taskId, streamingMessages, setStreamingMes
       console.warn('Inngest subscription error:', error);
       // Don't throw or crash the app, just log the error
       // If it's a stream cancellation error, disable the subscription temporarily
-      const errorMessage = typeof error === 'string' ? error : (error as any)?.message || '';
+      const errorMessage = typeof error === 'string' ? error : (error as Error)?.message || '';
       if (errorMessage.includes('ReadableStream') || errorMessage.includes('locked by a reader')) {
         console.warn('Stream error detected, temporarily disabling subscription');
         setSubscriptionEnabled(false);

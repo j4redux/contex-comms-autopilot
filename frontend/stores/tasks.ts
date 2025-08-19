@@ -21,6 +21,21 @@ export interface Task {
   isArchived: boolean;
   mode: "process" | "ask";
   hasChanges: boolean;
+  files?: {
+    [filePath: string]: {
+      metadata: {
+        fileName: string;
+        fileType: string;
+        directory: string;
+        size: number;
+        modifiedAt: number;
+        displayTitle?: string;
+      };
+      content?: string;
+      status: 'new' | 'updated';
+      updatedAt: number;
+    };
+  };
 }
 
 interface TaskStore {

@@ -6,7 +6,6 @@ import { realtimeMiddleware, channel, topic } from "@inngest/realtime"
 import { executeCommand } from "./daytona"
 import { createSandbox } from "./sandbox"
 import { loadConfig } from "./config"
-import { Daytona } from "@daytonaio/sdk"
 
 // Create backend Inngest client with realtime middleware
 export const inngest = new Inngest({
@@ -30,14 +29,6 @@ export const taskChannel = channel("tasks")
     }>()
   )
 
-// Helper function to create Daytona client
-function createClient(): Daytona {
-  const cfg = loadConfig()
-  return new Daytona({
-    apiKey: cfg.daytonaApiKey!,
-    apiUrl: cfg.daytonaApiUrl!
-  })
-}
 
 // Helper functions for file detection
 function determineFileType(filePath: string): string {
@@ -61,139 +52,90 @@ function isTextFile(filePath: string): boolean {
   return ['md', 'txt', 'json', 'html', 'csv'].includes(ext || '');
 }
 
-// Capture existing files before Claude execution
-async function captureExistingFiles(sandboxId: string, artifactBase: string): Promise<Map<string, number>> {
-  try {
-    const daytona = createClient();
-    const workspace = await daytona.get(sandboxId);
-    const existingFiles = new Map<string, number>();
-    
-    // SDK paths are relative to workspace root
-    const deliverableDirs = [
-      "deliverables/emails",
-      "deliverables/memos", 
-      "deliverables/presentations",
-      "updates",
-      "metrics/historical"
-    ];
-    
-    for (const dir of deliverableDirs) {
-      try {
-        const fileList = await workspace.fs.listFiles(dir);
-        for (const fileInfo of fileList) {
-          if (!fileInfo.isDir) {
-            const filePath = `${dir}/${fileInfo.name}`;
-            const modTime = typeof fileInfo.modTime === 'string' ? parseInt(fileInfo.modTime) : fileInfo.modTime;
-            existingFiles.set(filePath, modTime);
-          }
-        }
-      } catch (dirError) {
-        // Directory doesn't exist yet - skip
-        console.log(`Directory ${dir} not accessible for baseline:`, String(dirError));
-      }
-    }
-    
-    return existingFiles;
-  } catch (error) {
-    console.error("Failed to capture existing files baseline:", error);
-    return new Map();
-  }
+// Record execution start time for file detection
+function recordExecutionStart(): number {
+  return Date.now();
 }
 
-// Process individual file change (new or updated)
-async function processFileChange(workspace: any, filePath: string, fileInfo: any, messageType: string, taskId: string, jobId: string, publish: any) {
+// Process individual detected file using shell commands
+async function processDetectedFile(sandboxId: string, filePath: string, jobId: string, publish: any, taskId: string) {
   try {
-    // Send metadata with correct message type
+    // Get file stats with single stat command
+    const statResult = await executeCommand(sandboxId, `stat -c "%s %Y" "${filePath}" 2>/dev/null`);
+    if (statResult.exitCode !== 0) {
+      console.log(`Cannot access file ${filePath}: ${statResult.stderr}`);
+      return;
+    }
+    
+    const [size, modTime] = statResult.stdout.trim().split(' ');
+    const fileName = filePath.split('/').pop() || '';
+    
+    // Send file metadata message
     await publish(taskChannel().update({
       taskId,
       message: {
-        type: messageType, // "file_created" or "file_updated"
+        type: "file_created",
         data: {
           filePath,
-          fileName: fileInfo.name,
+          fileName,
           fileType: determineFileType(filePath),
           directory: getDirectoryFromPath(filePath),
-          size: fileInfo.size,
-          modifiedAt: typeof fileInfo.modTime === 'string' ? parseInt(fileInfo.modTime) : fileInfo.modTime
+          size: parseInt(size),
+          modifiedAt: parseInt(modTime) * 1000 // Convert to milliseconds
         },
         jobId,
         ts: Date.now(),
       }
     }));
     
-    // Send updated content for text files
+    // Get file content for text files
     if (isTextFile(filePath)) {
-      const contentBuffer = await workspace.fs.downloadFile(filePath);
-      await publish(taskChannel().update({
-        taskId,
-        message: {
-          type: "file_content",
-          data: {
-            filePath,
-            content: contentBuffer.toString('utf-8').slice(0, 50000) // Limit size
-          },
-          jobId,
-          ts: Date.now(),
-        }
-      }));
-    }
-  } catch (fileError) {
-    console.error(`Failed to process file ${filePath}:`, fileError);
-  }
-}
-
-// Scan for file changes after Claude execution
-async function scanFileChanges(sandboxId: string, startTime: number, existingFiles: Map<string, number>, jobId: string, publish: any, taskId: string, artifactBase: string) {
-  try {
-    console.log(`🔍 File detection: Scanning for changes after ${new Date(startTime).toISOString()}`);
-    console.log(`🔍 File detection: Baseline captured ${existingFiles.size} existing files`);
-    console.log(`🔍 File detection: Using artifactBase: ${artifactBase}`);
-    
-    const daytona = createClient();
-    const workspace = await daytona.get(sandboxId);
-    
-    // SDK paths are relative to workspace root
-    const deliverableDirs = [
-      "deliverables/emails",
-      "deliverables/memos", 
-      "deliverables/presentations",
-      "updates",
-      "metrics/historical"
-    ];
-    
-    for (const dir of deliverableDirs) {
-      try {
-        const currentFileList = await workspace.fs.listFiles(dir);
-        
-        for (const fileInfo of currentFileList) {
-          if (fileInfo.isDir) continue;
-          
-          const filePath = `${dir}/${fileInfo.name}`;
-          const previousModTime = existingFiles.get(filePath);
-          const currentModTime = typeof fileInfo.modTime === 'string' ? parseInt(fileInfo.modTime) : fileInfo.modTime;
-          
-          let messageType: string;
-          
-          if (!previousModTime) {
-            // File didn't exist before - it's new
-            messageType = "file_created";
-          } else if (currentModTime > previousModTime) {
-            // File existed but was modified
-            messageType = "file_updated"; 
-          } else {
-            // File unchanged - skip
-            continue;
+      const contentResult = await executeCommand(sandboxId, `head -c 50000 "${filePath}" 2>/dev/null`);
+      if (contentResult.exitCode === 0) {
+        await publish(taskChannel().update({
+          taskId,
+          message: {
+            type: "file_content",
+            data: {
+              filePath,
+              content: contentResult.stdout
+            },
+            jobId,
+            ts: Date.now(),
           }
-          
-          // Process the file change
-          await processFileChange(workspace, filePath, fileInfo, messageType, taskId, jobId, publish);
-        }
-      } catch (dirError) {
-        console.log(`Cannot scan ${dir}:`, String(dirError));
+        }));
       }
     }
   } catch (error) {
-    console.error("Failed to scan for file changes:", error);
+    console.error(`Failed to process detected file ${filePath}:`, error);
+  }
+}
+
+// Detect files created during Claude execution using shell commands
+async function detectCreatedFiles(sandboxId: string, startTimestamp: number, jobId: string, publish: any, taskId: string) {
+  try {
+    const startDate = new Date(startTimestamp);
+    const dateStr = startDate.toISOString().slice(0, 19).replace('T', ' ');
+    
+    console.log(`🔍 File detection: Scanning for files modified after ${dateStr}`);
+    
+    // Single find command to locate all modified files
+    const findCommand = `find /home/omni -type f -newermt "${dateStr}" \\( -name "*.md" -o -name "*.txt" -o -name "*.json" -o -name "*.html" -o -name "*.csv" \\) 2>/dev/null | head -20`;
+    
+    const result = await executeCommand(sandboxId, findCommand);
+    
+    if (result.exitCode === 0 && result.stdout.trim()) {
+      const filePaths = result.stdout.trim().split('\n').filter(path => path.length > 0);
+      console.log(`🔍 File detection: Found ${filePaths.length} modified files`);
+      
+      for (const filePath of filePaths) {
+        await processDetectedFile(sandboxId, filePath, jobId, publish, taskId);
+      }
+    } else {
+      console.log(`🔍 File detection: No files found or command failed (exit code: ${result.exitCode})`);
+    }
+  } catch (error) {
+    console.error("Failed to detect created files:", error);
     // Don't fail the main process
   }
 }
@@ -402,9 +344,8 @@ export const processKnowledge = inngest.createFunction(
           })
         )
 
-        // Capture existing files before Claude execution for change detection
-        const existingFiles = await captureExistingFiles(sandboxId, artifactBase);
-        const executionStartTime = Date.now();
+        // Record execution start time for file detection
+        const executionStartTime = recordExecutionStart();
 
         const claudeResult = await executeCommand(sandboxId, command)
 
@@ -438,9 +379,9 @@ export const processKnowledge = inngest.createFunction(
               })
             )
 
-            // Scan for deliverable files created/modified during Claude execution
+            // Detect deliverable files created during Claude execution
             console.log("🔍 Starting file detection scan (JSON parse success)...");
-            await scanFileChanges(sandboxId, executionStartTime, existingFiles, jobId, publish, taskId, artifactBase);
+            await detectCreatedFiles(sandboxId, executionStartTime, jobId, publish, taskId);
             console.log("✅ File detection scan completed (JSON parse success)");
 
             return { success: true, result: claudeResponse.result || claudeResult.stdout }
@@ -471,9 +412,9 @@ export const processKnowledge = inngest.createFunction(
               })
             )
 
-            // Scan for deliverable files created/modified during Claude execution
+            // Detect deliverable files created during Claude execution
             console.log("🔍 Starting file detection scan (fallback)...");
-            await scanFileChanges(sandboxId, executionStartTime, existingFiles, jobId, publish, taskId, artifactBase);
+            await detectCreatedFiles(sandboxId, executionStartTime, jobId, publish, taskId);
             console.log("✅ File detection scan completed (fallback)");
 
             return { success: true, result: claudeResult.stdout }

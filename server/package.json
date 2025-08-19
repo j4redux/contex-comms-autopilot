@@ -14,7 +14,8 @@
     "test:claude": "bun run tests/02-claude-execution-test.ts",
     "test:session": "bun run tests/03-session-management-test.ts",
     "test:api": "bun run tests/05-api-endpoint-test.ts",
-    "test:all": "bun run test:snapshot && bun run test:claude && bun run test:session && bun run test:api"
+    "test:files": "bun run tests/06-file-detection-test.ts",
+    "test:all": "bun run test:snapshot && bun run test:claude && bun run test:session && bun run test:api && bun run test:files"
   },
   "dependencies": {
     "@daytonaio/sdk": "0.25.5",
