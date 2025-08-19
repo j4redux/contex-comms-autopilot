@@ -18,9 +18,9 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Omni | Documents that Close Deals",
+  title: "Omni | Investor Relations for Founders",
   description:
-    "Omni helps founders create investor-ready materials in minutes.",
+    "The difference between funded and forgotten; from radio silence to terms sheets. Create investor-ready materials in minutes with Omni.",
 };
 
 export default function RootLayout({

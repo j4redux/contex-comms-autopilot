@@ -3,7 +3,7 @@ import { Archive, Check, Trash2 } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { useEffect, useState } from "react";
 
-import { useTaskStore } from "@/stores/tasks";
+import { useTaskStore, Task } from "@/stores/tasks";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { TextShimmer } from "@/components/ui/text-shimmer";
@@ -15,6 +15,13 @@ export default function TaskList() {
     useTaskStore();
   const activeTasks = getActiveTasks();
   const archivedTasks = getArchivedTasks();
+
+  // Helper function to check if task is old and stuck
+  const isTaskStuck = (task: Task) => {
+    const taskAge = Date.now() - new Date(task.createdAt).getTime();
+    const fiveMinutesInMs = 5 * 60 * 1000;
+    return task.status === "IN_PROGRESS" && taskAge > fiveMinutesInMs;
+  };
 
   useEffect(() => {
     setIsHydrated(true);
@@ -74,11 +81,12 @@ export default function TaskList() {
                       )}
                     </div>
                   </Link>
-                  {task.status === "DONE" && (
+                  {(task.status === "DONE" || isTaskStuck(task)) && (
                     <Button
                       variant="outline"
                       size="icon"
                       onClick={() => archiveTask(task.id)}
+                      title={isTaskStuck(task) ? "Archive stuck task" : "Archive completed task"}
                     >
                       <Archive />
                     </Button>

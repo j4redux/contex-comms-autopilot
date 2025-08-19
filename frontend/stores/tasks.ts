@@ -2,7 +2,7 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 
-type TaskStatus = "IN_PROGRESS" | "DONE" | "MERGED";
+type TaskStatus = "IN_PROGRESS" | "DONE";
 
 export interface Task {
   id: string;

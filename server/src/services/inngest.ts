@@ -19,7 +19,7 @@ export const taskChannel = channel("tasks")
   .addTopic(
     topic("status").type<{
       taskId: string;
-      status: "IN_PROGRESS" | "DONE" | "MERGED";
+      status: "IN_PROGRESS" | "DONE";
       sessionId: string;
     }>()
   )
