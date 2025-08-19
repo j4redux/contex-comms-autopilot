@@ -2,8 +2,7 @@
 import Link from "next/link";
 import {
   Archive,
-  ArrowLeft,
-  Dot,
+  ArrowLeft
 } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { useCallback } from "react";
@@ -45,10 +44,6 @@ export default function TaskNavbar({ id }: Props) {
                     addSuffix: true,
                   })
                 : "Loading..."}
-            </p>
-            <Dot className="size-4 text-muted-foreground" />
-            <p className="text-sm text-muted-foreground">
-              {task?.mode === "process" ? "Knowledge Processing" : "Knowledge Query"}
             </p>
           </div>
         </div>

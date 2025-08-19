@@ -1,14 +1,11 @@
 "use client";
-import { useInngestSubscription } from "@inngest/realtime/hooks";
 import { useEffect, useRef } from "react";
 
 import TaskNavbar from "./_components/navbar";
 import MessageInput from "./_components/message-input";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { fetchRealtimeSubscriptionToken } from "@/app/actions/inngest";
 import { useTaskStore } from "@/stores/tasks";
 import { Terminal, Bot, User, Loader } from "lucide-react";
-// TaskMessage type is already defined in the store/component
 import { TextShimmer } from "@/components/ui/text-shimmer";
 import { Markdown } from "@/components/markdown";
 import {
@@ -18,25 +15,10 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
+import { useInngestRealtime } from "@/providers/inngest-realtime-provider";
 
 interface Props {
   id: string;
-}
-
-interface IncomingMessage {
-  type: string;
-  data?: unknown;
-  [key: string]: unknown;
-}
-
-// Type guard to check if message is a valid incoming message
-function isValidIncomingMessage(message: unknown): message is IncomingMessage {
-  return (
-    typeof message === "object" &&
-    message !== null &&
-    "type" in message &&
-    typeof message.type === "string"
-  );
 }
 
 export default function TaskClientPage({ id }: Props) {
@@ -45,7 +27,9 @@ export default function TaskClientPage({ id }: Props) {
   const scrollAreaRef = useRef<HTMLDivElement>(null);
   const chatScrollAreaRef = useRef<HTMLDivElement>(null);
   const hasMarkedViewedRef = useRef<string | null>(null);
-  const processedMessagesRef = useRef<Set<string>>(new Set());
+
+  // Get global subscription status for debugging
+  const { isConnected, error } = useInngestRealtime();
 
   // Function to get the output message for a given shell call message
   const getOutputForCall = (callId: string) => {
@@ -56,63 +40,15 @@ export default function TaskClientPage({ id }: Props) {
     );
   };
 
-  const { latestData } = useInngestSubscription({
-    refreshToken: fetchRealtimeSubscriptionToken,
-    bufferInterval: 0,
-  });
-
+  // Log subscription status for debugging
   useEffect(() => {
-    if (latestData?.channel === "tasks" && latestData.topic === "update") {
-      const { taskId, message } = latestData.data;
-
-      if (taskId === id && message && isValidIncomingMessage(message)) {
-        // Create unique message ID to prevent duplicate processing
-        const messageId = `${message.type}-${message.jobId || ''}-${message.ts || Date.now()}`;
-        
-        if (processedMessagesRef.current.has(messageId)) {
-          return; // Skip already processed message
-        }
-        
-        processedMessagesRef.current.add(messageId);
-        console.log("Processing new message:", message.type, message);
-        
-        // Handle different message types from backend
-        if (message.type === "result") {
-          console.log("✅ RESULT MESSAGE:", message.data);
-          // Claude response - add as assistant message
-          updateTask(id, {
-            messages: [...(task?.messages || []), {
-              role: "assistant",
-              type: "message", 
-              data: {
-                text: message.data,
-                ...message
-              }
-            }],
-          });
-        } else if (message.type === "done") {
-          console.log("✅ DONE MESSAGE");
-          // Task completed - update status
-          updateTask(id, {
-            status: "DONE",
-          });
-        } else if (message.type === "log") {
-          // Don't spam UI with log messages, just console log
-          console.log("📝 LOG:", message.data);
-        } else {
-          console.log("❓ OTHER MESSAGE:", message.type, message);
-          // Error or other important message types
-          updateTask(id, {
-            messages: [...(task?.messages || []), {
-              role: "assistant",
-              type: message.type,
-              data: message
-            }],
-          });
-        }
-      }
-    }
-  }, [latestData, id, task?.messages, updateTask]);
+    console.log("📱 TaskClientPage subscription status:", { 
+      taskId: id,
+      isConnected, 
+      error,
+      messageCount: task?.messages.length || 0
+    });
+  }, [id, isConnected, error, task?.messages.length]);
 
   // Auto-scroll to bottom when messages change
   useEffect(() => {

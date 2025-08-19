@@ -5,6 +5,7 @@ import "./globals.css";
 import "./streaming.css";
 
 import Container from "./container";
+import { InngestRealtimeProvider } from "@/providers/inngest-realtime-provider";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -17,7 +18,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Omni | Operations Automation for Founders",
+  title: "Omni | Documents that Close Deals",
   description:
     "Omni helps founders create investor-ready materials in minutes.",
 };
@@ -38,7 +39,9 @@ export default function RootLayout({
           enableSystem
           disableTransitionOnChange
         >
-          <Container>{children}</Container>
+          <InngestRealtimeProvider>
+            <Container>{children}</Container>
+          </InngestRealtimeProvider>
         </ThemeProvider>
       </body>
     </html>

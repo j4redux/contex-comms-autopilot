@@ -1,5 +1,5 @@
 "use client";
-import { Archive, Check, Dot, Trash2 } from "lucide-react";
+import { Archive, Check, Trash2 } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { useEffect, useState } from "react";
 
@@ -69,10 +69,6 @@ export default function TaskList() {
                                   addSuffix: true,
                                 })
                               : "Just now"}
-                          </p>
-                          <Dot className="size-4 text-muted-foreground" />
-                          <p className="text-sm text-muted-foreground">
-                            {task.mode === "process" ? "Processing" : "Query"}
                           </p>
                         </div>
                       )}
