@@ -7,6 +7,20 @@ import { executeCommand } from "./daytona"
 import { createSandbox } from "./sandbox"
 import { loadConfig } from "./config"
 
+// Simple in-memory cache for task results
+// In production, use Redis or a database
+interface TaskResult {
+  taskId: string
+  success: boolean
+  result?: string
+  messages: any[]
+  files: any[]
+  error?: string
+  timestamp: number
+}
+
+export const taskResultsCache = new Map<string, TaskResult>()
+
 // Create backend Inngest client with realtime middleware
 export const inngest = new Inngest({
   id: "omni-backend", 
@@ -111,7 +125,62 @@ async function processDetectedFile(sandboxId: string, filePath: string, jobId: s
   }
 }
 
-// Detect files created during Claude execution using shell commands
+// Modified version that returns files instead of publishing
+async function detectCreatedFilesForCache(sandboxId: string, startTimestamp: number, jobId: string): Promise<any[]> {
+  const files: any[] = [];
+  try {
+    const startDate = new Date(startTimestamp);
+    const dateStr = startDate.toISOString().slice(0, 19).replace('T', ' ');
+    
+    console.log(`🔍 File detection: Scanning for files modified after ${dateStr}`);
+    
+    // Single find command to locate all modified files
+    const findCommand = `find /home/omni -type f -newermt "${dateStr}" \\( -name "*.md" -o -name "*.txt" -o -name "*.json" -o -name "*.html" -o -name "*.csv" \\) 2>/dev/null | head -20`;
+    
+    const result = await executeCommand(sandboxId, findCommand);
+    
+    if (result.exitCode === 0 && result.stdout.trim()) {
+      const filePaths = result.stdout.trim().split('\n').filter(path => path.length > 0);
+      console.log(`🔍 File detection: Found ${filePaths.length} modified files`);
+      
+      for (const filePath of filePaths) {
+        // Get file stats
+        const statResult = await executeCommand(sandboxId, `stat -c "%s %Y" "${filePath}" 2>/dev/null`);
+        if (statResult.exitCode === 0) {
+          const [size, modTime] = statResult.stdout.trim().split(' ');
+          const fileName = filePath.split('/').pop() || '';
+          
+          // Get file content for text files
+          let content = '';
+          if (isTextFile(filePath)) {
+            const contentResult = await executeCommand(sandboxId, `head -c 50000 "${filePath}" 2>/dev/null`);
+            if (contentResult.exitCode === 0) {
+              content = contentResult.stdout;
+            }
+          }
+          
+          files.push({
+            filePath,
+            fileName,
+            fileType: determineFileType(filePath),
+            directory: getDirectoryFromPath(filePath),
+            size: parseInt(size),
+            modifiedAt: parseInt(modTime) * 1000,
+            content,
+            jobId
+          });
+        }
+      }
+    } else {
+      console.log(`🔍 File detection: No files found or command failed (exit code: ${result.exitCode})`);
+    }
+  } catch (error) {
+    console.error("Failed to detect created files:", error);
+  }
+  return files;
+}
+
+// Original function still exists for compatibility
 async function detectCreatedFiles(sandboxId: string, startTimestamp: number, jobId: string, publish: any, taskId: string) {
   try {
     const startDate = new Date(startTimestamp);
@@ -192,7 +261,7 @@ export const processKnowledge = inngest.createFunction(
   { id: "process-knowledge" },
   { event: "omni/process.knowledge" },
   async ({ event, step, publish }) => {
-    const { taskId, sandboxId, userId, input, model, jobId } = event.data;
+    const { taskId, sandboxId, input, model, jobId } = event.data;
     
     console.log("🚀 Inngest function started:", { taskId, sandboxId, input })
 
@@ -459,6 +528,48 @@ export const processKnowledge = inngest.createFunction(
         })
       )
 
+      // Store results in cache for retrieval
+      const messages: any[] = [];
+      const files: any[] = [];
+      
+      // Collect all the messages that were attempted to be published
+      messages.push(
+        { type: "log", data: "job started", jobId, ts: Date.now() },
+        { type: "log", data: "artifact base: /workspace", jobId, ts: Date.now() },
+        { type: "log", data: "claude --version OK", jobId, ts: Date.now() },
+        { type: "result", format: "text", data: (result as any).result || "No result", jobId, ts: Date.now() },
+        { type: "done", exitCode: result.success ? 0 : 1, jobId, ts: Date.now() }
+      );
+      
+      // Get files that were created
+      if (result.success) {
+        const executionStartTime = Date.now() - 60000; // Look back 1 minute
+        const detectedFiles = await detectCreatedFilesForCache(sandboxId, executionStartTime, jobId);
+        files.push(...detectedFiles);
+      }
+      
+      // Store in cache
+      const taskResult: TaskResult = {
+        taskId,
+        success: result.success || false,
+        result: (result as any).result,
+        messages,
+        files,
+        error: (result as any).error,
+        timestamp: Date.now()
+      };
+      
+      taskResultsCache.set(taskId, taskResult);
+      console.log(`✅ Stored results for task ${taskId} in cache with ${messages.length} messages and ${files.length} files`);
+      
+      // Clean up old cache entries (keep last 100)
+      if (taskResultsCache.size > 100) {
+        const entries = Array.from(taskResultsCache.entries());
+        entries.sort((a, b) => a[1].timestamp - b[1].timestamp);
+        const toDelete = entries.slice(0, entries.length - 100);
+        toDelete.forEach(([key]) => taskResultsCache.delete(key));
+      }
+      
       return result
     } catch (error) {
       // Handle unexpected errors (original logic)
@@ -482,6 +593,22 @@ export const processKnowledge = inngest.createFunction(
           sessionId: sandboxId,
         })
       )
+      
+      // Store error in cache
+      const taskResult: TaskResult = {
+        taskId,
+        success: false,
+        messages: [
+          { type: "error", code: "EXECUTION_ERROR", message: String(error), jobId, ts: Date.now() },
+          { type: "done", exitCode: 1, jobId, ts: Date.now() }
+        ],
+        files: [],
+        error: String(error),
+        timestamp: Date.now()
+      };
+      
+      taskResultsCache.set(taskId, taskResult);
+      console.log(`❌ Stored error results for task ${taskId} in cache`);
 
       return { success: false, error: String(error) }
     }

@@ -1,5 +1,5 @@
 "use client";
-import { createContext, useContext, useEffect, useRef, ReactNode } from "react";
+import { createContext, useContext, useEffect, useRef, ReactNode, useCallback } from "react";
 import { useInngestSubscription } from "@inngest/realtime/hooks";
 import { fetchRealtimeSubscriptionToken } from "@/app/actions/inngest";
 import { useTaskStore } from "@/stores/tasks";
@@ -113,9 +113,10 @@ interface InngestRealtimeProviderProps {
 }
 
 export function InngestRealtimeProvider({ children }: InngestRealtimeProviderProps) {
-  const { updateTask, getTaskById } = useTaskStore();
+  const { updateTask, getTaskById, getTasks } = useTaskStore();
   const processedMessagesRef = useRef<Set<string>>(new Set());
   const subscriptionReadyRef = useRef(false);
+  const pollingIntervalsRef = useRef<Map<string, NodeJS.Timeout>>(new Map());
 
   const { latestData, error } = useInngestSubscription({
     refreshToken: fetchRealtimeSubscriptionToken,
@@ -300,6 +301,139 @@ export function InngestRealtimeProvider({ children }: InngestRealtimeProviderPro
       }
     }
   }, [latestData, updateTask, getTaskById]);
+
+  // Polling function to fetch task results from backend cache
+  const pollTaskResults = useCallback(async (taskId: string) => {
+    try {
+      const response = await fetch(`http://localhost:8787/api/task/results?taskId=${taskId}`);
+      if (!response.ok) {
+        console.error("Failed to fetch task results:", response.status);
+        return;
+      }
+      
+      const data = await response.json();
+      
+      if (data.found) {
+        console.log("📊 Received task results from polling:", {
+          taskId: data.taskId,
+          messagesCount: data.messages?.length,
+          filesCount: data.files?.length
+        });
+        
+        const currentTask = getTaskById(taskId);
+        if (!currentTask) {
+          console.warn("Task not found in store:", taskId);
+          return;
+        }
+        
+        // Process messages
+        if (data.messages && data.messages.length > 0) {
+          const newMessages = data.messages
+            .filter((msg: any) => msg.type === "result")
+            .map((msg: any) => ({
+              role: "assistant" as const,
+              type: "message",
+              data: {
+                text: typeof msg.data === 'string' ? msg.data : String(msg.data || ''),
+                messageType: msg.type,
+                jobId: msg.jobId,
+                timestamp: msg.ts
+              }
+            }));
+          
+          if (newMessages.length > 0) {
+            updateTask(taskId, {
+              messages: [...currentTask.messages, ...newMessages]
+            });
+          }
+        }
+        
+        // Process files
+        if (data.files && data.files.length > 0) {
+          const filesMap: any = {};
+          data.files.forEach((file: any) => {
+            filesMap[file.filePath] = {
+              metadata: {
+                fileName: file.fileName,
+                fileType: file.fileType,
+                directory: file.directory,
+                size: file.size,
+                modifiedAt: file.modifiedAt,
+                displayTitle: extractTitleFromContent(
+                  file.content || '',
+                  file.fileType,
+                  file.fileName
+                )
+              },
+              content: file.content || '',
+              status: 'new' as const,
+              updatedAt: Date.now()
+            };
+          });
+          
+          updateTask(taskId, {
+            files: { ...currentTask.files, ...filesMap }
+          });
+        }
+        
+        // Update status if task is complete
+        if (data.success !== undefined) {
+          updateTask(taskId, {
+            status: "DONE"
+          });
+          
+          // Stop polling for this task
+          const interval = pollingIntervalsRef.current.get(taskId);
+          if (interval) {
+            clearInterval(interval);
+            pollingIntervalsRef.current.delete(taskId);
+            console.log("⏹️ Stopped polling for task:", taskId);
+          }
+        }
+      }
+    } catch (error) {
+      console.error("Error polling task results:", error);
+    }
+  }, [getTaskById, updateTask]);
+  
+  // Start polling for tasks that are IN_PROGRESS
+  useEffect(() => {
+    const tasks = getTasks();
+    const inProgressTasks = tasks.filter(task => task.status === "IN_PROGRESS");
+    
+    inProgressTasks.forEach(task => {
+      // Only start polling if not already polling
+      if (!pollingIntervalsRef.current.has(task.id)) {
+        console.log("🔄 Starting polling for task:", task.id);
+        
+        // Poll immediately
+        pollTaskResults(task.id);
+        
+        // Then poll every 2 seconds
+        const interval = setInterval(() => {
+          pollTaskResults(task.id);
+        }, 2000);
+        
+        pollingIntervalsRef.current.set(task.id, interval);
+      }
+    });
+    
+    // Clean up polling for tasks no longer in progress
+    pollingIntervalsRef.current.forEach((interval, taskId) => {
+      const task = getTaskById(taskId);
+      if (!task || task.status !== "IN_PROGRESS") {
+        clearInterval(interval);
+        pollingIntervalsRef.current.delete(taskId);
+        console.log("⏹️ Cleaned up polling for task:", taskId);
+      }
+    });
+    
+    // Cleanup on unmount
+    return () => {
+      pollingIntervalsRef.current.forEach(interval => clearInterval(interval));
+      pollingIntervalsRef.current.clear();
+    };
+  }, [getTasks, getTaskById, pollTaskResults]);
 
   const contextValue: InngestRealtimeContextType = {
     isConnected: subscriptionReadyRef.current,

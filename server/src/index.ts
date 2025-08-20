@@ -5,7 +5,7 @@ import { Effect } from "effect"
 import { loadConfig } from "./services/config"
 import { createSandbox, getSandboxStatus } from "./services/sandbox"
 import { executeCommand, executeCommandAsync, getCommandStatus, ensureSandboxRunning } from "./services/daytona"
-import { inngest } from "./services/inngest"
+import { inngest, taskResultsCache } from "./services/inngest"
 import { inngestHandler } from "./api/inngest"
 import crypto from "node:crypto"
 
@@ -13,13 +13,26 @@ type Json = Record<string, unknown> | unknown[] | string | number | boolean | nu
 
 function json(body: Json, init: ResponseInit = {}) {
   return new Response(JSON.stringify(body, null, 2), {
-    headers: { "content-type": "application/json; charset=utf-8" },
+    headers: { 
+      "content-type": "application/json; charset=utf-8",
+      "Access-Control-Allow-Origin": "*",
+      "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
+      "Access-Control-Allow-Headers": "Content-Type"
+    },
     ...init,
   })
 }
 
 function apiError(code: string, message: string, details?: unknown, status = 400) {
-  return json({ error: { code, message, details } }, { status })
+  return new Response(JSON.stringify({ error: { code, message, details } }, null, 2), {
+    status,
+    headers: {
+      "content-type": "application/json; charset=utf-8",
+      "Access-Control-Allow-Origin": "*",
+      "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
+      "Access-Control-Allow-Headers": "Content-Type"
+    }
+  })
 }
 
 function notFound() {
@@ -82,6 +95,18 @@ const server = Bun.serve({
   port: config.port,
   fetch(req: Request) {
     const url = new URL(req.url)
+    
+    // Handle CORS preflight requests
+    if (req.method === "OPTIONS") {
+      return new Response(null, {
+        headers: {
+          "Access-Control-Allow-Origin": "*",
+          "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
+          "Access-Control-Allow-Headers": "Content-Type",
+          "Access-Control-Max-Age": "86400"
+        }
+      })
+    }
 
 
     // Sandbox creation
@@ -114,6 +139,32 @@ const server = Bun.serve({
           return json({ sandboxId: sb.id, status: sb.status, createdAt: sb.createdAt })
         })
       )
+    }
+
+    // Get task results from cache
+    if (url.pathname === "/api/task/results") {
+      if (req.method !== "GET") return methodNotAllowed()
+      const taskId = url.searchParams.get("taskId")
+      if (!taskId) return apiError("VALIDATION_ERROR", "Missing taskId", undefined, 400)
+      
+      const result = taskResultsCache.get(taskId)
+      if (!result) {
+        return json({ 
+          found: false,
+          taskId 
+        }, { status: 200 })
+      }
+      
+      return json({ 
+        found: true,
+        taskId,
+        success: result.success,
+        result: result.result,
+        messages: result.messages,
+        files: result.files,
+        error: result.error,
+        timestamp: result.timestamp
+      }, { status: 200 })
     }
 
     // Simple knowledge processing
