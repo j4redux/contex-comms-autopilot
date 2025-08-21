@@ -24,7 +24,7 @@ const lora = Lora({
 });
 
 export const metadata: Metadata = {
-  title: "Omni | Investor Relations for Founders",
+  title: "Omni | Comms on Autopilot",
   description:
     "The difference between funded and forgotten; from radio silence to terms sheets. Create investor-ready materials in minutes with Omni.",
 };
