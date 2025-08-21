@@ -396,15 +396,27 @@ export function InngestRealtimeProvider({ children }: InngestRealtimeProviderPro
     }
   }, [getTaskById, updateTask]);
   
-  // Start polling for tasks that are IN_PROGRESS
+  // Start polling for tasks that need data
   useEffect(() => {
     const tasks = getTasks();
-    const inProgressTasks = tasks.filter(task => task.status === "IN_PROGRESS");
+    // Poll for tasks that are IN_PROGRESS or recently created (within last 2 minutes)
+    const tasksNeedingPolling = tasks.filter(task => {
+      if (task.status === "IN_PROGRESS") return true;
+      // Also poll DONE tasks created in the last 2 minutes that might not have data yet
+      if (task.status === "DONE") {
+        const taskAge = Date.now() - new Date(task.createdAt).getTime();
+        const hasNoMessages = !task.messages || task.messages.filter(m => m.role === "assistant").length === 0;
+        const hasNoFiles = !task.files || Object.keys(task.files).length === 0;
+        // Poll if task is recent and has no data
+        return taskAge < 120000 && (hasNoMessages || hasNoFiles);
+      }
+      return false;
+    });
     
-    inProgressTasks.forEach(task => {
+    tasksNeedingPolling.forEach(task => {
       // Only start polling if not already polling
       if (!pollingIntervalsRef.current.has(task.id)) {
-        console.log("🔄 Starting polling for task:", task.id);
+        console.log("🔄 Starting polling for task:", task.id, "status:", task.status);
         
         // Poll immediately
         pollTaskResults(task.id);
@@ -418,13 +430,24 @@ export function InngestRealtimeProvider({ children }: InngestRealtimeProviderPro
       }
     });
     
-    // Clean up polling for tasks no longer in progress
+    // Clean up polling for tasks that have data or are old
     pollingIntervalsRef.current.forEach((interval, taskId) => {
       const task = getTaskById(taskId);
-      if (!task || task.status !== "IN_PROGRESS") {
+      if (!task) {
         clearInterval(interval);
         pollingIntervalsRef.current.delete(taskId);
-        console.log("⏹️ Cleaned up polling for task:", taskId);
+        console.log("⏹️ Cleaned up polling for deleted task:", taskId);
+      } else {
+        const taskAge = Date.now() - new Date(task.createdAt).getTime();
+        const hasMessages = task.messages && task.messages.filter(m => m.role === "assistant").length > 0;
+        const hasFiles = task.files && Object.keys(task.files).length > 0;
+        
+        // Stop polling if task is old (>2 min) or has received data
+        if (taskAge > 120000 || (task.status === "DONE" && hasMessages && hasFiles)) {
+          clearInterval(interval);
+          pollingIntervalsRef.current.delete(taskId);
+          console.log("⏹️ Stopped polling for task:", taskId, "(has data or too old)");
+        }
       }
     });
     
