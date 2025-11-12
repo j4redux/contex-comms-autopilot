@@ -26,7 +26,7 @@ export const createTaskAction = async ({
 
   // Send Inngest event to trigger backend task creation flow
   await inngest.send({
-    name: "omni/create.task",
+    name: "contex/create.task",
     data: {
       task,
       userId,

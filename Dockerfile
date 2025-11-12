@@ -16,10 +16,10 @@ RUN apt-get update && \
     rm -rf /var/lib/apt/lists/* /tmp/install.sh
 
 # Create non-root user for runtime
-RUN groupadd -r omni && useradd -r -g omni -m omni
+RUN groupadd -r contex && useradd -r -g contex -m contex
 
-# Create Claude settings directory and proper settings.json for both root and omni
-RUN mkdir -p /root/.claude /home/omni/.claude && \
+# Create Claude settings directory and proper settings.json for both root and contex
+RUN mkdir -p /root/.claude /home/contex/.claude && \
     cat > /root/.claude/settings.json << 'EOF'
 {
   "permissions": {
@@ -59,34 +59,34 @@ RUN mkdir -p /root/.claude /home/omni/.claude && \
   }
 }
 EOF
-RUN cp /root/.claude/settings.json /home/omni/.claude/settings.json && chown -R omni:omni /home/omni/.claude
+RUN cp /root/.claude/settings.json /home/contex/.claude/settings.json && chown -R contex:contex /home/contex/.claude
 
-# Create the founder operations structure directly in /home/omni
+# Create the founder operations structure directly in /home/contex
 RUN mkdir -p \
-    /home/omni/metrics/historical \
-    /home/omni/stakeholders/investors \
-    /home/omni/stakeholders/customers \
-    /home/omni/updates \
-    /home/omni/deliverables/emails \
-    /home/omni/deliverables/memos \
-    /home/omni/deliverables/presentations \
-    /home/omni/context \
-    /home/omni/founder_profile
+    /home/contex/metrics/historical \
+    /home/contex/stakeholders/investors \
+    /home/contex/stakeholders/customers \
+    /home/contex/updates \
+    /home/contex/deliverables/emails \
+    /home/contex/deliverables/memos \
+    /home/contex/deliverables/presentations \
+    /home/contex/context \
+    /home/contex/founder_profile
 
 # Set working directory before creating files
-WORKDIR /home/omni
+WORKDIR /home/contex
 
 
-# Ensure ownership for omni user
-RUN chown -R omni:omni /home/omni
+# Ensure ownership for contex user
+RUN chown -R contex:contex /home/contex
 
 # Switch to non-root user
-USER omni
+USER contex
 
-# Create all files as omni user to ensure proper ownership
-RUN echo "# Omni Backend - Founder Operations System" > README.md && \
+# Create all files as contex user to ensure proper ownership
+RUN echo "# Contex Backend - Founder Operations System" > README.md && \
     echo "" >> README.md && \
-    echo "You are Claude Code operating as the intelligence layer for Omni - transforming founder inputs into investor-ready communications." >> README.md && \
+    echo "You are Claude Code operating as the intelligence layer for Contex - transforming founder inputs into investor-ready communications." >> README.md && \
     echo "" >> README.md && \
     echo "## Core Mission" >> README.md && \
     echo "Transform any founder input (voice notes, bullets, stream of consciousness) into structured, metrics-driven deliverables that can be sent immediately." >> README.md && \
@@ -97,7 +97,7 @@ RUN echo "# Omni Backend - Founder Operations System" > README.md && \
     echo "3. **Founder Voice**: Authentic but elevated communication" >> README.md && \
     echo "4. **Universal**: Works for any business model or stage" >> README.md
 
-# Create initial JSON files (as omni user)
+# Create initial JSON files (as contex user)
 RUN echo "{" > metrics/current.json && \
     echo "  \"timestamp\": null," >> metrics/current.json && \
     echo "  \"metrics\": {}," >> metrics/current.json && \

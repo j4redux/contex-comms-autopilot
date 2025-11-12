@@ -3,7 +3,7 @@ import { realtimeMiddleware, channel, topic } from "@inngest/realtime";
 
 // Create a client to SEND events only (no functions)
 export const inngest = new Inngest({
-  id: "omni-frontend",
+  id: "contex-frontend",
   middleware: [realtimeMiddleware()],
 });
 

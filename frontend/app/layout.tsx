@@ -24,9 +24,9 @@ const lora = Lora({
 });
 
 export const metadata: Metadata = {
-  title: "Omni | Comms on Autopilot",
+  title: "Contex | Your Company on Autopilot",
   description:
-    "The difference between funded and forgotten; from radio silence to terms sheets. Create investor-ready materials in minutes with Omni.",
+    "The difference between funded and forgotten; from radio silence to terms sheets. Create investor-ready materials in minutes with Touchbase.",
 };
 
 export default function RootLayout({

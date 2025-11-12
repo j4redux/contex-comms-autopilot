@@ -1,7 +1,5 @@
-// Project Omni API Client
-// Replaces VibeKit SDK integration with direct API calls
+// Project Contex API Client
 
-// TypeScript interfaces matching backend API contract
 export interface Sandbox {
   id: string
   userId: string
@@ -32,11 +30,11 @@ export interface ApiError {
 }
 
 // Main API client class
-export class OmniApiClient {
+export class ContexApiClient {
   private baseUrl: string
 
   constructor(baseUrl?: string) {
-    this.baseUrl = baseUrl || process.env.NEXT_PUBLIC_OMNI_API_URL || 'http://localhost:8787'
+    this.baseUrl = baseUrl || process.env.NEXT_PUBLIC_CONTEX_API_URL || 'http://localhost:8787'
   }
 
   /**
@@ -135,13 +133,13 @@ export class OmniApiClient {
 }
 
 // Default client instance
-export const omniApi = new OmniApiClient()
+export const contexApi = new ContexApiClient()
 
 // Utility functions for common operations
 export async function ensureSandbox(userId: string): Promise<Sandbox> {
   try {
     // Try to create sandbox (backend handles reuse automatically)
-    return await omniApi.createSandbox(userId)
+    return await contexApi.createSandbox(userId)
   } catch (error: any) {
     throw new Error(`Failed to ensure sandbox for user ${userId}: ${error.message}`)
   }
@@ -159,7 +157,7 @@ export async function submitFounderInput(
   const taskId = `task_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
 
   // Submit processing request
-  const response = await omniApi.processKnowledge({
+  const response = await contexApi.processKnowledge({
     input,
     sandboxId: sandbox.id,
     userId,

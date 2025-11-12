@@ -1,6 +1,6 @@
 # Project Omni Backend (Bun + TS)
 
-Minimal scaffold for the API and WebSocket server. Endpoints match the spec and will be wired to Daytona + Claude next.
+API and WebSocket server.
 
 ## Run
 

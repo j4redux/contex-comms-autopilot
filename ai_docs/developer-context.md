@@ -2,30 +2,38 @@
 
 ## Executive Summary
 
-**Project Omni** is an AI-powered tool that transforms founder "brain dumps" into professional investor-ready materials (updates, memos, fundraising documents) in minutes. The system uses Claude Code running in isolated Daytona sandboxes to process unstructured founder thoughts into structured business intelligence and polished deliverables.
+**Project Omni** turns founder thoughts into investor-ready materials in minutes—memos, updates, and fundraising documents that close deals and sound like you at your sharpest. **Omni remembers everything**, so founders never explain the same context twice.
 
-**Current Status**: MVP Day 2+ COMPLETE - Pure Inngest event-driven architecture implemented and verified  
-**Timeline**: 3-day MVP sprint for design partner testing  
-**Last Updated**: August 19, 2025 - Scrolling bug fixed in task detail page
+The system uses Claude Code 1.0.80 running in persistent Daytona sandboxes (Workspace-as-a-Service) to build cumulative knowledge over time, creating high switching costs and a natural moat.
+
+**Current Status**: Production-ready MVP with 2 design partners confirmed  
+**Traction**: 20+ founder interviews, 1 potential $2,000/month customer  
+**Last Updated**: August 21, 2025 - Workspace persistence implementation in progress
 
 ---
 
 ## Business Context & Value Proposition
 
 ### Problem
-Founders spend precious hours writing investor updates and memos that determine their company's future. They need to convert scattered thoughts about metrics, challenges, wins, and strategic plans into investor-grade documents that actually close deals.
+Founders waste 10+ hours/month on investor communications. Every AI tool makes them explain the same context repeatedly. The result: generic documents that don't sound like them and don't close deals.
 
 ### Solution
-**"From founder brain dump to investor-ready materials that close deals"**
-- Input: Unstructured founder thoughts via web interface
-- Processing: Claude Code + structured "knowledge as code" filesystem  
-- Output: Professional investor materials (updates, memos, pitch narratives)
+**"Your Corporate Comms Autopilot that never forgets"**
+- **Persistent Memory**: Workspace-as-a-Service architecture ensures Claude remembers everything
+- **Compound Value**: Every interaction builds on all previous knowledge
+- **Authentic Voice**: Materials sound like you at your sharpest
+- **High Switching Costs**: Once months of context are built, moving means starting over (moat)
 
-### Success Metrics
-- Time from brain dump to investor-ready material: <2 minutes
-- Fundraising success rate improvement vs. manual approach
-- Material usage rate (founders actually send the output)
-- Deal velocity improvement for fundraising users
+### Market Validation
+- **20+ founder interviews** confirming the pain
+- **2 design partners** from first sales conversations
+- **1 potential customer** willing to pay $2,000/month
+- **$10M ARR target** from investor communications alone
+
+### Expansion Strategy (Wedge)
+1. **Phase 1**: Investor communications (current)
+2. **Phase 2**: Internal updates
+3. **Phase 3**: Enterprise coordination
 
 ---
 
@@ -127,18 +135,27 @@ Event Flow: Frontend → "omni/create.task" → createTask → "omni/process.kno
 
 **Critical Architecture Note**: All Inngest messages MUST be handled in the global `InngestRealtimeProvider`. Never create additional `useInngestSubscription` hooks - they will not receive messages due to subscription conflicts.
 
-**Still In Progress**:
+### 🚧 Currently In Progress (August 21, 2025)
+
+**Workspace-as-a-Service Implementation**:
+- 🔄 **Persistent sandbox mappings**: User-to-sandbox mappings survive server restart
+- 🔄 **Workspace service layer**: Abstraction over sandbox management
+- 🔄 **File synchronization**: Recovery of files when sandbox is replaced
+- 🔄 **Health monitoring**: Automatic sandbox restart and recovery
+
+**UI/UX Polish**:
 - [ ] Modify task form for founder-specific input patterns
 - [ ] Update UI messaging for investor materials context
+- [ ] Add workspace status indicators
 
-### 📋 Planned (Day 3 - Polish & Testing)
+### 📋 Next Sprint
 
-**Design Partner Ready**:
-- [x] File detection and display system
-- [ ] Error handling and edge cases
-- [ ] UI messaging for founder context  
-- [ ] Real founder scenario testing
-- [ ] Deploy to staging environment
+**Production Deployment**:
+- [ ] Authentication system (JWT-based)
+- [ ] Multi-user support with isolated workspaces
+- [ ] Production Daytona configuration
+- [ ] Monitoring and observability
+- [ ] Deploy to staging for design partners
 
 ---
 
@@ -666,7 +683,7 @@ PORT=8787
 
 **Claude Code Execution**:
 - **Tool Restrictions**: Sandbox has restricted tool permissions (see Dockerfile)
-- **Working Directory**: `/home/daytona/workspace` or `/workspace` (fallback logic)
+- **Working Directory**: `/home/omni` (structured knowledge filesystem)
 - **API Key**: Must be available as `ANTHROPIC_API_KEY` in sandbox environment
 
 **Inngest Integration**:
@@ -681,50 +698,72 @@ PORT=8787
 
 ---
 
+## Workspace-as-a-Service Architecture
+
+### Core Innovation
+The key technical differentiator is our **Workspace-as-a-Service** layer that provides persistent memory:
+
+```
+┌─────────────┐     ┌─────────────┐     ┌─────────────┐     ┌─────────────┐
+│  Inngest    │────▶│  Workspace  │────▶│   Sandbox   │────▶│   Daytona   │
+│  Functions  │     │   Service   │     │   Service   │     │   Sandboxes │
+└─────────────┘     └─────────────┘     └─────────────┘     └─────────────┘
+                           │
+                    (persistent storage)
+                    .workspaces.json
+```
+
+- **Workspace Service**: Manages user-to-sandbox mappings persistently
+- **Automatic Recovery**: Restarts stopped sandboxes, recreates broken ones
+- **File Sync**: Restores cached files to new sandboxes when needed
+- **Zero Breaking Changes**: Pure abstraction layer over existing sandbox system
+
+See `/ai_docs/persistent-sandbox-implementation.md` for complete details.
+
 ## Next Steps & Roadmap
 
-### Immediate Next Steps (Day 2)
+### Immediate (This Week)
 
-**Priority 1: Core Integration**
-1. **Replace API Stubs**: Implement real API calls in `omni-api.ts`
-2. **WebSocket Client**: Create real-time streaming connection
-3. **Task Form Updates**: Customize for founder brain dumps vs code tasks
-4. **Message Protocol**: Map backend WebSocket messages to frontend UI
-5. **End-to-End Testing**: Verify full processing pipeline
+**Priority 1: Complete Workspace Persistence**
+1. ✅ Document Workspace-as-a-Service architecture
+2. 🔄 Implement `workspace-service.ts` with file-based persistence
+3. 🔄 Update `inngest.ts` to use workspace service
+4. [ ] Test persistence across server restarts
+5. [ ] Add file recovery from cache
 
-**Priority 2: UI Customization**
-1. **Founder-Specific Language**: Update placeholders and messaging
-2. **Investor Materials Display**: Show generated updates/memos
-3. **Processing States**: Better visual feedback during Claude processing
-4. **Error Handling**: Graceful error states and recovery
+**Priority 2: Design Partner Preparation**
+1. [ ] Deploy to staging environment
+2. [ ] Create onboarding documentation
+3. [ ] Set up monitoring and error tracking
+4. [ ] Prepare demo scenarios
 
-### Short-term Roadmap (Week 2-3)
+### Short-term (Next 2 Weeks)
 
-**User Experience**:
-- Authentication system (JWT-based)
-- Mobile-responsive design improvements  
-- Onboarding flow for new founders
-- Export functionality for generated materials
+**Authentication & Multi-tenancy**:
+- JWT-based authentication system
+- User registration and login flow
+- Proper user isolation in production
+- Rate limiting and usage tracking
 
-**Technical Improvements**:
-- Comprehensive error boundaries and logging
-- Performance optimization for large documents
-- Background job monitoring and retry logic
-- Basic analytics and usage tracking
+**Production Infrastructure**:
+- Deploy backend to Railway/Fly.io
+- Deploy frontend to Vercel
+- Configure production Daytona instance
+- Set up database for user data
 
-### Medium-term Roadmap (Month 2)
+### Medium-term (Month 2)
 
-**Product Features**:
-- Multi-document upload and context building
-- Integration with founder tools (email, calendar, CRM)
-- Team collaboration (multiple users per company)
-- Investor portal for sharing materials
+**Scale & Polish**:
+- Mobile app (React Native/Expo)
+- Advanced file management UI
+- Export functionality (PDF, Word)
+- Webhook integrations for automated updates
 
-**Technical Platform**:
-- Production deployment pipeline
-- Monitoring and observability stack
-- Backup and disaster recovery
-- Security audit and hardening
+**Enterprise Features**:
+- Team workspaces
+- Permission management
+- SSO integration
+- Audit logs
 
 ---
 
@@ -867,5 +906,5 @@ lsof -ti:8787 | xargs kill  # Backend
 
 ---
 
-*Last Updated: August 19, 2025 - File Detection System Complete & Scrolling Bug Fixed*  
-*Next Update: After founder-specific UI customization*
+*Last Updated: August 21, 2025 - Workspace-as-a-Service Architecture Documented*  
+*Next Update: After workspace persistence implementation complete*
