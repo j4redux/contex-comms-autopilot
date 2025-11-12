@@ -601,12 +601,6 @@ NEXT_PUBLIC_DEBUG=true bun run dev
 
 This project is licensed under the Creative Commons Attribution-NonCommercial-NoDerivatives 4.0 International License (CC BY-NC-ND 4.0).
 
-**In summary:**
-- ✅ You can share and redistribute the material
-- ✅ For non-commercial purposes only
-- ⚠️ Must give appropriate credit
-- ❌ Cannot create derivative works or modifications
-
 See [LICENSE.md](./LICENSE.md) for full details.
 
 ---
