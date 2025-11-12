@@ -21,12 +21,12 @@ You **MUST** rotate the following keys immediately:
 
 **Anthropic API Key:**
 - Visit: https://console.anthropic.com/settings/keys
-- Revoke: `[REDACTED-ANTHROPIC-KEY]`
+- Revoke the exposed key (starts with `sk-ant-api03-...`)
 - Generate new key and update `server/.env`
 
 **Daytona API Key:**
 - Visit: https://app.daytona.io/settings/api-keys
-- Revoke: `[REDACTED-DAYTONA-KEY]`
+- Revoke the exposed key (starts with `dtn_...`)
 - Generate new key and update `server/.env`
 
 **Inngest Keys:**
@@ -64,12 +64,12 @@ git push origin --force --all
 # Install BFG
 brew install bfg  # macOS
 
-# Create a file with sensitive patterns
+# Create a file with sensitive patterns (use your actual exposed keys)
 cat > secrets.txt << EOF
-[REDACTED-ANTHROPIC-KEY]
-[REDACTED-DAYTONA-KEY]
-[REDACTED-INNGEST-EVENT-KEY]
-[REDACTED-INNGEST-SIGNING-KEY]
+YOUR_EXPOSED_ANTHROPIC_KEY_HERE
+YOUR_EXPOSED_DAYTONA_KEY_HERE
+YOUR_EXPOSED_INNGEST_EVENT_KEY_HERE
+YOUR_EXPOSED_INNGEST_SIGNING_KEY_HERE
 EOF
 
 # Clean the repo

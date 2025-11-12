@@ -16,7 +16,7 @@
 **Anthropic API Key:**
 ```
 1. Go to: https://console.anthropic.com/settings/keys
-2. Delete key: [REDACTED-ANTHROPIC-KEY]
+2. Delete the exposed key (starts with sk-ant-api03-...)
 3. Create new key
 4. Update server/.env with new key
 ```
@@ -24,7 +24,7 @@
 **Daytona API Key:**
 ```
 1. Go to: https://app.daytona.io/settings/api-keys
-2. Delete key: [REDACTED-DAYTONA-KEY]
+2. Delete the exposed key (starts with dtn_...)
 3. Create new key
 4. Update server/.env with new key
 ```
