@@ -1,4 +1,4 @@
-# Project Omni Backend (Bun + TS)
+# Contex Backend (Bun + TS)
 
 API and WebSocket server.
 
