@@ -2,7 +2,7 @@
 
 **Corporate Comms Autopilot with Persistent Memory**
 
-Contex is an AI-powered communications platform that leverages Claude Code execution within Daytona sandboxes to transform founder thoughts into structured business deliverables. The system features a unique **workspace-as-a-service** architecture where each user gets a persistent, isolated environment that accumulates knowledge over time.
+Contex is an AI-powered communications platform that leverages Claude Agent SDK execution within Daytona sandboxes to transform founder thoughts into structured business deliverables. The system features a unique **workspace-as-a-service** architecture where each user gets a persistent, isolated environment that accumulates knowledge over time.
 
 [![Architecture Status](https://img.shields.io/badge/Architecture-Production%20Ready-green)]()
 [![Tech Stack](https://img.shields.io/badge/Stack-Bun%20%2B%20Next.js%20%2B%20Effect-blue)]()
@@ -149,7 +149,7 @@ The frontend provides:
 - **Framework:** Effect (functional programming for TypeScript)
 - **Event Processing:** Inngest (durable workflows and real-time events)
 - **Sandbox Management:** Daytona SDK
-- **AI Integration:** Claude Code CLI v1.0.80
+- **AI Integration:** Claude Agent SDK
 
 #### Frontend (`/frontend`)
 - **Framework:** Next.js 15.3.3 with React 19
@@ -214,7 +214,7 @@ The frontend provides:
 │                    Daytona Sandboxes (Docker)                    │
 │  ┌──────────────────────────────────────────────────────┐      │
 │  │  User Sandbox (isolated container)                    │      │
-│  │  • Claude Code CLI pre-installed                      │      │
+│  │  • Claude Agent SDK pre-installed                     │      │
 │  │  • Persistent workspace at /home/contex               │      │
 │  │  • Environment variables injected                     │      │
 │  │  • File system for knowledge persistence              │      │
@@ -228,7 +228,7 @@ The frontend provides:
 - Each user gets a dedicated Daytona sandbox (Docker container)
 - Sandboxes persist across server restarts
 - Automatic recovery: stopped sandboxes are detected and restarted
-- Pre-configured snapshot with Claude Code v1.0.80 pre-installed
+- Pre-configured snapshot with Claude Agent SDK pre-installed
 - Environment variables securely injected (API keys, user IDs)
 
 #### 2. **Claude Code Execution Pipeline**
@@ -259,7 +259,7 @@ project-contex/
 ├── LICENSE.md                       # CC BY-NC-ND 4.0 License
 ├── .gitignore                       # Git ignore rules
 ├── package.json                    # Root package.json (workspace)
-├── Dockerfile                      # Claude Code sandbox image
+├── Dockerfile                      # Claude Agent SDK sandbox image
 │
 ├── frontend/                       # Next.js 15 web application
 │   ├── app/                        # App Router pages and components
@@ -299,7 +299,7 @@ project-contex/
 
 The following directories are excluded via `.gitignore`:
 - `/.ai_docs` - Internal AI documentation
-- `/.claude` - Claude CLI configuration
+- `/.claude` - Claude Agent SDK configuration
 - `/node_modules` - Package dependencies
 - Build artifacts, logs, and environment files
 
@@ -311,7 +311,7 @@ The following directories are excluded via `.gitignore`:
 
 The backend includes a comprehensive test suite covering:
 - Snapshot creation
-- Claude Code execution
+- Claude Agent SDK execution
 - Session management
 - API endpoints
 - File detection
@@ -321,7 +321,7 @@ cd server
 
 # Run individual test suites
 bun run test:snapshot        # Test sandbox snapshots
-bun run test:claude          # Test Claude Code execution
+bun run test:claude          # Test Claude Agent SDK execution
 bun run test:session         # Test session management
 bun run test:api             # Test API endpoints
 bun run test:files           # Test file detection
@@ -394,7 +394,7 @@ Check sandbox status for a user.
 ```
 
 #### `POST /api/knowledge/process`
-Process a user prompt through Claude Code.
+Process a user prompt through Claude Agent SDK.
 
 **Request:**
 ```json
@@ -467,7 +467,7 @@ const createSandbox = (userId: string) =>
 
 **Key Services:**
 - `SandboxManager` - Sandbox lifecycle management
-- `ClaudeRunner` - Claude Code execution
+- `ClaudeRunner` - Claude Agent SDK execution
 - `InngestService` - Event handling
 
 #### Frontend (React + Zustand)
@@ -612,7 +612,7 @@ See [LICENSE.md](./LICENSE.md) for full details.
 - [Inngest Documentation](https://www.inngest.com/docs)
 - [Next.js Documentation](https://nextjs.org/docs)
 - [Daytona SDK](https://github.com/daytonaio/sdk)
-- [Claude Code CLI](https://docs.anthropic.com/claude/docs)
+- [Claude Agent SDK](https://docs.claude.com/en/docs/agent-sdk/overview)
 
 ---
 
@@ -625,4 +625,4 @@ For questions or issues:
 
 ---
 
-**Built with Bun, Effect, Next.js, and Claude Code**
+**Built with Bun, Effect, Next.js, and Claude Agent SDK**
