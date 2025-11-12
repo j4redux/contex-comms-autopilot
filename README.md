@@ -7,7 +7,7 @@ Contex is an AI-powered communications platform that leverages Claude Code execu
 [![Architecture Status](https://img.shields.io/badge/Architecture-Production%20Ready-green)]()
 [![Tech Stack](https://img.shields.io/badge/Stack-Bun%20%2B%20Next.js%20%2B%20Effect-blue)]()
 
-## 🚀 Quick Start
+## Quick Start
 
 ### Prerequisites
 
@@ -140,7 +140,7 @@ The frontend provides:
 
 ---
 
-## 🏗️ Architecture Overview
+## Architecture Overview
 
 ### Tech Stack
 
@@ -251,7 +251,7 @@ The frontend provides:
 
 ---
 
-## 📁 Repository Structure
+## Repository Structure
 
 ```
 project-contex/
@@ -306,7 +306,7 @@ project-contex/
 
 ---
 
-## 🧪 Testing
+## Testing
 
 ### Running Backend Tests
 
@@ -360,7 +360,7 @@ See [TESTING-GUIDE.md](./TESTING-GUIDE.md) for comprehensive testing procedures.
 
 ---
 
-## 🔌 API Reference
+## API Reference
 
 ### REST Endpoints
 
@@ -448,7 +448,7 @@ Main event for processing user prompts.
 
 ---
 
-## 🔧 Development
+## Development
 
 ### Code Organization
 
@@ -512,7 +512,7 @@ bun run lint         # ESLint
 
 ---
 
-## 🚀 Deployment
+## Deployment
 
 ### Production Considerations
 
@@ -541,7 +541,7 @@ See [ai_docs/deployment-strategy.md](./ai_docs/deployment-strategy.md) for detai
 
 ---
 
-## 📚 Documentation
+## Documentation
 
 ### Core Documentation
 
@@ -563,7 +563,7 @@ See [ai_docs/deployment-strategy.md](./ai_docs/deployment-strategy.md) for detai
 
 ---
 
-## 🐛 Troubleshooting
+## Troubleshooting
 
 ### Common Issues
 
@@ -613,7 +613,7 @@ NEXT_PUBLIC_DEBUG=true bun run dev
 
 ---
 
-## 🤝 Contributing
+## Contributing
 
 ### Development Workflow
 
@@ -633,13 +633,13 @@ NEXT_PUBLIC_DEBUG=true bun run dev
 
 ---
 
-## 📄 License
+## License
 
 See [LICENSE.md](./LICENSE.md) for details.
 
 ---
 
-## 🔗 Related Resources
+## Related Resources
 
 - [Bun Documentation](https://bun.sh/docs)
 - [Effect Documentation](https://effect.website)
@@ -650,7 +650,7 @@ See [LICENSE.md](./LICENSE.md) for details.
 
 ---
 
-## 📧 Support
+## Support
 
 For questions or issues:
 1. Check the [troubleshooting section](#-troubleshooting)
@@ -659,4 +659,4 @@ For questions or issues:
 
 ---
 
-**Built with 💙 using Bun, Effect, Next.js, and Claude Code**
+**Built with Bun, Effect, Next.js, and Claude Code**
