@@ -256,8 +256,8 @@ The frontend provides:
 ```
 project-contex/
 ├── README.md                        # This file
-├── ARCHITECTURAL_REVIEW.md          # Comprehensive architecture analysis
-├── TESTING-GUIDE.md                # Testing procedures and strategies
+├── LICENSE.md                       # CC BY-NC-ND 4.0 License
+├── .gitignore                       # Git ignore rules
 ├── package.json                    # Root package.json (workspace)
 ├── Dockerfile                      # Claude Code sandbox image
 │
@@ -292,17 +292,16 @@ project-contex/
 │   ├── package.json
 │   └── .env                        # Environment variables
 │
-├── ai_docs/                        # Product and technical documentation
-│   ├── README.md                   # Documentation index
-│   ├── spec.md                     # Product specification
-│   ├── developer-context.md        # Developer guide
-│   ├── persistent-sandbox-implementation.md
-│   ├── api-contract.md
-│   └── ...                         # Additional documentation
-│
-├── infra/                          # Infrastructure configuration
-└── node_modules/                   # Shared dependencies
+└── infra/                          # Infrastructure configuration
 ```
+
+### Excluded from Version Control
+
+The following directories are excluded via `.gitignore`:
+- `/.ai_docs` - Internal AI documentation
+- `/.claude` - Claude CLI configuration
+- `/node_modules` - Package dependencies
+- Build artifacts, logs, and environment files
 
 ---
 
@@ -356,7 +355,7 @@ bun run test:all
 
 ### Integration Testing
 
-See [TESTING-GUIDE.md](./TESTING-GUIDE.md) for comprehensive testing procedures.
+Test the full stack by creating tasks through the frontend and monitoring execution through the Inngest dashboard.
 
 ---
 
@@ -537,30 +536,6 @@ bun run lint         # ESLint
    - Implement logging (CloudWatch, DataDog)
    - Set up error tracking (Sentry)
 
-See [ai_docs/deployment-strategy.md](./ai_docs/deployment-strategy.md) for detailed deployment procedures.
-
----
-
-## Documentation
-
-### Core Documentation
-
-- **[ARCHITECTURAL_REVIEW.md](./ARCHITECTURAL_REVIEW.md)** - Comprehensive architectural analysis and technical debt assessment
-- **[TESTING-GUIDE.md](./TESTING-GUIDE.md)** - Testing strategies and procedures
-- **[ai_docs/](./ai_docs/)** - Complete product and technical documentation
-  - `spec.md` - Product specification and vision
-  - `developer-context.md` - Implementation status and patterns
-  - `persistent-sandbox-implementation.md` - Workspace persistence details
-  - `api-contract.md` - API specifications
-  - `inngest-streaming-design.md` - Event architecture
-
-### Quick Links
-
-- [Product Specification](./ai_docs/spec.md)
-- [Developer Context](./ai_docs/developer-context.md)
-- [API Contract](./ai_docs/api-contract.md)
-- [Persistent Sandbox Design](./ai_docs/persistent-sandbox-implementation.md)
-
 ---
 
 ## Troubleshooting
@@ -613,18 +588,7 @@ NEXT_PUBLIC_DEBUG=true bun run dev
 
 ---
 
-## Contributing
-
-### Development Workflow
-
-1. Create a feature branch: `git checkout -b feature/your-feature`
-2. Make changes and test thoroughly
-3. Run type checking: `cd server && bun run typecheck`
-4. Run tests: `cd server && bun run test:all`
-5. Commit with descriptive messages
-6. Open a pull request
-
-### Code Style
+## Code Style
 
 - **TypeScript:** Strict mode enabled
 - **Effect:** Use Effect for error handling and side effects
@@ -635,7 +599,15 @@ NEXT_PUBLIC_DEBUG=true bun run dev
 
 ## License
 
-See [LICENSE.md](./LICENSE.md) for details.
+This project is licensed under the Creative Commons Attribution-NonCommercial-NoDerivatives 4.0 International License (CC BY-NC-ND 4.0).
+
+**In summary:**
+- ✅ You can share and redistribute the material
+- ✅ For non-commercial purposes only
+- ⚠️ Must give appropriate credit
+- ❌ Cannot create derivative works or modifications
+
+See [LICENSE.md](./LICENSE.md) for full details.
 
 ---
 
@@ -653,8 +625,8 @@ See [LICENSE.md](./LICENSE.md) for details.
 ## Support
 
 For questions or issues:
-1. Check the [troubleshooting section](#-troubleshooting)
-2. Review documentation in [ai_docs/](./ai_docs/)
+1. Check the [troubleshooting section](#troubleshooting)
+2. Review the architecture overview in this README
 3. Open an issue in the repository
 
 ---
