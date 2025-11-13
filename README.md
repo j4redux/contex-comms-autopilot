@@ -7,6 +7,10 @@ Contex is an AI-powered communications platform that leverages Claude Agent SDK 
 [![Architecture Status](https://img.shields.io/badge/Architecture-Production%20Ready-green)]()
 [![Tech Stack](https://img.shields.io/badge/Stack-Bun%20%2B%20Claude%20Agent%20SDK%20%2B%20Next.js%20%2B%20Effect-blue)]()
 
+## Demo
+
+![Contex Demo](./demo.gif)
+
 ## Quick Start
 
 ### Prerequisites
