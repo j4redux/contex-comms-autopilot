@@ -218,10 +218,10 @@ graph TB
     
     SandboxManager --> Daytona
     
-    subgraph Daytona["<b>Daytona Sandboxes (Docker)</b>"]
+    subgraph Daytona["<b>Daytona Sandboxes</b>"]
         style Daytona fill:#e5e5e5,stroke:#525252,stroke-width:3px,color:#1a1a1a
         
-        UserSandbox["<b>User Sandbox</b><br/>Isolated Container<br/>• Claude Agent SDK<br/>• Workspace: /home/contex<br/>• Environment injection<br/>• Persistent file system"]
+        UserSandbox["<b>User Sandbox</b><br/>Docker Container<br/>• Claude Agent SDK<br/>• Workspace: /home/contex<br/>• Environment injection<br/>• Persistent file system"]
         style UserSandbox fill:#f5f5f5,stroke:#737373,stroke-width:2px,color:#1a1a1a
     end
 ```
