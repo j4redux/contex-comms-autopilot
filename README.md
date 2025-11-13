@@ -170,60 +170,60 @@ The frontend provides:
 
 ### System Architecture
 
-```
-┌─────────────────────────────────────────────────────────────┐
-│                        Frontend (Next.js)                    │
-│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐      │
-│  │  Task Form   │  │  Task List   │  │ File Display │      │
-│  └──────────────┘  └──────────────┘  └──────────────┘      │
-│         │                  │                   │             │
-│         └──────────────────┼───────────────────┘             │
-│                            │                                 │
-│                   ┌────────▼────────┐                        │
-│                   │ Zustand Store   │                        │
-│                   │ (localStorage)  │                        │
-│                   └────────┬────────┘                        │
-└────────────────────────────┼──────────────────────────────────┘
-                             │
-                    ┌────────▼────────┐
-                    │  Inngest        │
-                    │  Realtime       │
-                    │  WebSocket      │
-                    └────────┬────────┘
-                             │
-┌────────────────────────────┼──────────────────────────────────┐
-│                   Backend (Bun + Effect)                       │
-│                            │                                   │
-│  ┌────────────────────────▼───────────────────────┐          │
-│  │            REST API Server                      │          │
-│  │  /api/sandbox/create  /api/sandbox/status      │          │
-│  │  /api/knowledge/process  /api/task/results     │          │
-│  └────────────────────────┬───────────────────────┘          │
-│                            │                                   │
-│  ┌────────────────────────▼───────────────────────┐          │
-│  │         Inngest Event Functions                 │          │
-│  │  • contex/process.knowledge                     │          │
-│  │  • Real-time streaming                          │          │
-│  └────────────────────────┬───────────────────────┘          │
-│                            │                                   │
-│  ┌────────────────────────▼───────────────────────┐          │
-│  │         Sandbox Manager (Effect Layer)          │          │
-│  │  • Per-user sandbox creation                    │          │
-│  │  • Auto-restart on failure                      │          │
-│  │  • Status caching (30s TTL)                     │          │
-│  └────────────────────────┬───────────────────────┘          │
-└─────────────────────────────┼───────────────────────────────────┘
-                              │
-┌─────────────────────────────▼───────────────────────────────────┐
-│                    Daytona Sandboxes (Docker)                    │
-│  ┌──────────────────────────────────────────────────────┐      │
-│  │  User Sandbox (isolated container)                    │      │
-│  │  • Claude Agent SDK pre-installed                     │      │
-│  │  • Persistent workspace at /home/contex               │      │
-│  │  • Environment variables injected                     │      │
-│  │  • File system for knowledge persistence              │      │
-│  └──────────────────────────────────────────────────────┘      │
-└──────────────────────────────────────────────────────────────────┘
+```mermaid
+%%{init: {'theme':'base', 'themeVariables': { 'primaryColor':'#e5e5e5','primaryTextColor':'#1a1a1a','primaryBorderColor':'#525252','lineColor':'#525252','secondaryColor':'#d4d4d4','tertiaryColor':'#f5f5f5','background':'#ffffff','mainBkg':'#e5e5e5','secondBkg':'#d4d4d4','tertiaryBkg':'#f5f5f5','textColor':'#1a1a1a','border1':'#525252','border2':'#737373'}}}%%
+
+graph TB
+    subgraph Frontend["<b>Frontend (Next.js)</b>"]
+        style Frontend fill:#e5e5e5,stroke:#525252,stroke-width:3px,color:#1a1a1a
+        
+        TaskForm["<b>Task Form</b><br/>User Input"]
+        TaskList["<b>Task List</b><br/>Task History"]
+        FileDisplay["<b>File Display</b><br/>Artifacts"]
+        
+        style TaskForm fill:#f5f5f5,stroke:#737373,stroke-width:2px,color:#1a1a1a
+        style TaskList fill:#f5f5f5,stroke:#737373,stroke-width:2px,color:#1a1a1a
+        style FileDisplay fill:#f5f5f5,stroke:#737373,stroke-width:2px,color:#1a1a1a
+        
+        TaskForm --> ZustandStore
+        TaskList --> ZustandStore
+        FileDisplay --> ZustandStore
+        
+        ZustandStore["<b>Zustand Store</b><br/>localStorage persistence"]
+        style ZustandStore fill:#d4d4d4,stroke:#525252,stroke-width:2px,color:#1a1a1a
+    end
+    
+    ZustandStore --> InngestRealtime
+    
+    InngestRealtime["<b>Inngest Realtime</b><br/>WebSocket Connection"]
+    style InngestRealtime fill:#c2c2c2,stroke:#525252,stroke-width:2px,color:#1a1a1a
+    
+    InngestRealtime --> Backend
+    
+    subgraph Backend["<b>Backend (Bun + Effect)</b>"]
+        style Backend fill:#e5e5e5,stroke:#525252,stroke-width:3px,color:#1a1a1a
+        
+        RestAPI["<b>REST API Server</b><br/>/api/sandbox/create<br/>/api/sandbox/status<br/>/api/knowledge/process<br/>/api/task/results"]
+        style RestAPI fill:#f5f5f5,stroke:#737373,stroke-width:2px,color:#1a1a1a
+        
+        InngestFunctions["<b>Inngest Event Functions</b><br/>• contex/process.knowledge<br/>• Real-time streaming"]
+        style InngestFunctions fill:#f5f5f5,stroke:#737373,stroke-width:2px,color:#1a1a1a
+        
+        SandboxManager["<b>Sandbox Manager</b><br/>Effect Layer<br/>• Per-user sandbox creation<br/>• Auto-restart on failure<br/>• Status caching (30s TTL)"]
+        style SandboxManager fill:#f5f5f5,stroke:#737373,stroke-width:2px,color:#1a1a1a
+        
+        RestAPI --> InngestFunctions
+        InngestFunctions --> SandboxManager
+    end
+    
+    SandboxManager --> Daytona
+    
+    subgraph Daytona["<b>Daytona Sandboxes (Docker)</b>"]
+        style Daytona fill:#e5e5e5,stroke:#525252,stroke-width:3px,color:#1a1a1a
+        
+        UserSandbox["<b>User Sandbox</b><br/>Isolated Container<br/>• Claude Agent SDK pre-installed<br/>• Persistent workspace at /home/contex<br/>• Environment variables injected<br/>• File system for knowledge persistence"]
+        style UserSandbox fill:#f5f5f5,stroke:#737373,stroke-width:2px,color:#1a1a1a
+    end
 ```
 
 ### Key Features
