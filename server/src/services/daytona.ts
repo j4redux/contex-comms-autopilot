@@ -1,6 +1,3 @@
-// Clean Daytona implementation based on VibeKit's proven pattern
-// This is a minimal, working implementation that we'll build upon
-
 import { Daytona, Sandbox } from "@daytonaio/sdk"
 import { loadConfig } from "./config"
 
@@ -81,7 +78,7 @@ export async function createSandbox(userId: string): Promise<DaytonaSandbox> {
   
   const daytona = createClient()
   
-  // Set up environment variables following VibeKit pattern
+  // Set up environment variables
   const envVars: Record<string, string> = { 
     USER_ID: userId
   }
@@ -97,7 +94,7 @@ export async function createSandbox(userId: string): Promise<DaytonaSandbox> {
     envVars
   })
   
-  // Create session following VibeKit pattern exactly
+  // Create session
   await workspace.process.createSession(workspace.id)
   
   // Verify Claude Code is accessible (should be pre-installed in snapshot)
@@ -240,7 +237,7 @@ export async function ensureSandboxRunning(sandboxId: string): Promise<DaytonaSa
   return status
 }
 
-// Clean command execution following VibeKit pattern exactly  
+// Clean command execution
 export async function executeCommand(
   sandboxId: string, 
   command: string
@@ -253,9 +250,9 @@ export async function executeCommand(
   const workspace = await daytona.get(sandboxId)
   
   try {
-    // Follow VibeKit pattern exactly: use workspace.id as sessionId
+    // use workspace.id as sessionId
     const response = await workspace.process.executeSessionCommand(
-      workspace.id, // sessionId - VibeKit uses workspace.id directly
+      workspace.id, // sessionId
       {
         command: command,
         runAsync: false
