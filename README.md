@@ -26,10 +26,6 @@ Before you begin, ensure you have the following installed:
 ### Installation
 
 ```bash
-# Clone the repository
-git clone <repository-url>
-cd project-contex
-
 # Install root dependencies
 pnpm install
 
